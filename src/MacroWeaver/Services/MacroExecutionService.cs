@@ -97,6 +97,16 @@ public sealed class MacroExecutionService
                 case MacroStepType.Wait:
                     await DelayWithPauseAsync(TimeSpan.FromSeconds(Math.Clamp(step.Seconds, 0, 86400)), token);
                     break;
+                case MacroStepType.RandomWait:
+                    var minimum = Math.Clamp(step.Seconds, 0, 86400);
+                    var maximum = Math.Clamp(step.RandomWaitMaxSeconds, minimum, 86400);
+                    var randomSeconds = Random.Shared.NextDouble() * (maximum - minimum) + minimum;
+                    await DelayWithPauseAsync(TimeSpan.FromSeconds(randomSeconds), token);
+                    progress?.Report($"待機完了：{step.Name}（{randomSeconds:0.###} 秒）");
+                    break;
+                case MacroStepType.MouseScroll:
+                    SendMouseWheel(step.ScrollDelta);
+                    break;
                 case MacroStepType.KeyPress:
                     await PressKeyAsync(step.Key, step.Seconds, token);
                     break;
@@ -203,6 +213,25 @@ public sealed class MacroExecutionService
             throw new InvalidOperationException("マウスの相対移動を送信できませんでした。");
     }
 
+    private static void SendMouseWheel(int delta)
+    {
+        var input = new INPUT
+        {
+            type = 0,
+            U = new InputUnion
+            {
+                mi = new MOUSEINPUT
+                {
+                    mouseData = unchecked((uint)delta),
+                    dwFlags = (uint)MouseEventFlags.Wheel
+                }
+            }
+        };
+
+        if (SendInput(1, [input], Marshal.SizeOf<INPUT>()) != 1)
+            throw new InvalidOperationException("マウスホイール入力を送信できませんでした。");
+    }
+
     private static void SendMouse(MouseEventFlags flags)
     {
         var input = new INPUT
@@ -254,6 +283,7 @@ public sealed class MacroExecutionService
     private enum MouseEventFlags : uint
     {
         Move = 0x0001,
+        Wheel = 0x0800,
         LeftDown = 0x0002, LeftUp = 0x0004,
         RightDown = 0x0008, RightUp = 0x0010,
         MiddleDown = 0x0020, MiddleUp = 0x0040
