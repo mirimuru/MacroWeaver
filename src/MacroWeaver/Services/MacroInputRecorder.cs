@@ -87,18 +87,26 @@ public sealed class MacroInputRecorder : IDisposable
 
     private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && IsRecording && GetForegroundWindow() != _ignoredWindow)
+        if (nCode >= 0 && IsRecording)
         {
             var data = Marshal.PtrToStructure<KbdLlHookStruct>(lParam);
             if ((data.Flags & LlkhfInjected) == 0)
             {
                 var message = unchecked((int)wParam.ToInt64());
-                if (message is WmKeyDown or WmSysKeyDown)
+                var isKeyDown = message is WmKeyDown or WmSysKeyDown;
+                var isKeyUp = message is WmKeyUp or WmSysKeyUp;
+                var foregroundIsTarget = GetForegroundWindow() != _ignoredWindow;
+
+                // Only begin recording keys while another application is active, so
+                // typing into MacroWeaver's own editor does not become macro input.
+                if (isKeyDown && foregroundIsTarget)
                 {
                     if (!_pressedKeys.ContainsKey(data.VirtualKey))
                         _pressedKeys[data.VirtualKey] = Stopwatch.GetTimestamp();
                 }
-                else if (message is WmKeyUp or WmSysKeyUp && _pressedKeys.Remove(data.VirtualKey, out var started))
+                // Always accept key-up for a key we started tracking. The foreground
+                // can change before release (for example, when returning to click Stop).
+                else if (isKeyUp && _pressedKeys.Remove(data.VirtualKey, out var started))
                 {
                     var key = KeyInterop.KeyFromVirtualKey((int)data.VirtualKey);
                     if (key != Key.None && key != Key.ImeProcessed && key != Key.DeadCharProcessed)
