@@ -210,6 +210,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (StepsGrid.SelectedItem is MacroStep step) SelectedStep = step;
     }
 
+    private void StepsGridRow_PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is DataGridRow row && row.Item is MacroStep step)
+        {
+            row.IsSelected = true;
+            SelectedStep = step;
+            StepsGrid.CurrentItem = step;
+        }
+    }
+
     private void UpdatePropertyPanel()
     {
         _updatingProperties = true;
