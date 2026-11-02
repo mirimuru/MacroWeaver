@@ -3,6 +3,15 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="MacroWeaver" Height="760" Width="1240" MinHeight="620" MinWidth="980"
         WindowStartupLocation="CenterScreen" Background="#FF17191F" Foreground="#FFF3F4F8">
+    <Window.Resources>
+        <ContextMenu x:Key="StepContextMenu">
+            <MenuItem Header="↑ 上へ移動" Click="MoveUp_Click" />
+            <MenuItem Header="↓ 下へ移動" Click="MoveDown_Click" />
+            <Separator />
+            <MenuItem Header="⧉ 複製" Click="Duplicate_Click" />
+            <MenuItem Header="－ 削除" Click="Delete_Click" />
+        </ContextMenu>
+    </Window.Resources>
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -74,17 +83,7 @@
                                 <Setter Property="Background" Value="#FF292D37" />
                                 <Setter Property="Foreground" Value="#FFF3F4F8" />
                                 <EventSetter Event="PreviewMouseRightButtonDown" Handler="StepsGridRow_PreviewMouseRightButtonDown" />
-                                <Setter Property="ContextMenu">
-                                    <Setter.Value>
-                                        <ContextMenu>
-                                            <MenuItem Header="↑ 上へ移動" Click="MoveUp_Click" />
-                                            <MenuItem Header="↓ 下へ移動" Click="MoveDown_Click" />
-                                            <Separator />
-                                            <MenuItem Header="⧉ 複製" Click="Duplicate_Click" />
-                                            <MenuItem Header="－ 削除" Click="Delete_Click" />
-                                        </ContextMenu>
-                                    </Setter.Value>
-                                </Setter>
+                                <Setter Property="ContextMenu" Value="{StaticResource StepContextMenu}" />
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="Background" Value="#FF46516F" />
