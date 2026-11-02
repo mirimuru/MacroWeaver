@@ -122,7 +122,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 MacroStepType.KeyPress => "キー入力",
                 MacroStepType.MouseClick => "マウスクリック",
-                MacroStepType.MouseMove => "マウス移動",
+                MacroStepType.MouseMove => "マウス移動（座標）",
+                MacroStepType.MouseMoveRelative => "マウス相対移動",
                 MacroStepType.Wait => "待機",
                 MacroStepType.Repeat => "繰り返し",
                 _ => "操作"
@@ -166,6 +167,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void AddKey_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.KeyPress);
     private void AddClick_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.MouseClick);
     private void AddMove_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.MouseMove);
+    private void AddRelativeMove_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.MouseMoveRelative);
     private void AddWait_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.Wait);
     private void AddRepeat_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.Repeat);
 
@@ -194,6 +196,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         RepeatDurationSeconds = original.RepeatDurationSeconds,
         X = original.X,
         Y = original.Y,
+        RelativeX = original.RelativeX,
+        RelativeY = original.RelativeY,
         Children = original.Children.Select(CloneStep).ToList()
     };
 
@@ -264,6 +268,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         KeyPanel.Visibility = hasStep && step!.Type == MacroStepType.KeyPress ? Visibility.Visible : Visibility.Collapsed;
         ClickPanel.Visibility = hasStep && step!.Type == MacroStepType.MouseClick ? Visibility.Visible : Visibility.Collapsed;
         MovePanel.Visibility = hasStep && step!.Type == MacroStepType.MouseMove ? Visibility.Visible : Visibility.Collapsed;
+        RelativeMovePanel.Visibility = hasStep && step!.Type == MacroStepType.MouseMoveRelative ? Visibility.Visible : Visibility.Collapsed;
         WaitPanel.Visibility = hasStep && step!.Type == MacroStepType.Wait ? Visibility.Visible : Visibility.Collapsed;
         RepeatPanel.Visibility = hasStep && step!.Type == MacroStepType.Repeat ? Visibility.Visible : Visibility.Collapsed;
 
@@ -273,6 +278,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ClickCountBox.Text = (step?.RepeatCount ?? 1).ToString(CultureInfo.InvariantCulture);
         XBox.Text = (step?.X ?? 500).ToString(CultureInfo.InvariantCulture);
         YBox.Text = (step?.Y ?? 300).ToString(CultureInfo.InvariantCulture);
+        RelativeXBox.Text = (step?.RelativeX ?? 10).ToString(CultureInfo.InvariantCulture);
+        RelativeYBox.Text = (step?.RelativeY ?? 0).ToString(CultureInfo.InvariantCulture);
         WaitSecondsBox.Text = (step?.Seconds ?? 1).ToString(CultureInfo.InvariantCulture);
         RepeatCountBox.Text = (step?.RepeatCount ?? 3).ToString(CultureInfo.InvariantCulture);
         RepeatDurationCheck.IsChecked = step?.RepeatByDuration ?? false;
@@ -321,6 +328,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             if (int.TryParse(XBox.Text, out var x)) step.X = x;
             if (int.TryParse(YBox.Text, out var y)) step.Y = y;
+        }
+        else if (step.Type == MacroStepType.MouseMoveRelative)
+        {
+            if (int.TryParse(RelativeXBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var relativeX)) step.RelativeX = relativeX;
+            if (int.TryParse(RelativeYBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var relativeY)) step.RelativeY = relativeY;
         }
         else if (step.Type == MacroStepType.Wait)
         {
@@ -617,6 +629,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Seconds = s.Seconds, RepeatCount = s.RepeatCount,
         RepeatByDuration = s.RepeatByDuration, RepeatDurationSeconds = s.RepeatDurationSeconds,
         X = s.X, Y = s.Y,
+        RelativeX = s.RelativeX, RelativeY = s.RelativeY,
         Children = s.Children.Select(CloneForExecution).ToList()
     };
 
