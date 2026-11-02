@@ -8,6 +8,7 @@ public enum MacroStepType
     KeyPress,
     MouseClick,
     MouseMove,
+    MouseMoveRelative,
     Wait,
     Repeat
 }
@@ -23,6 +24,8 @@ public sealed class MacroStep : INotifyPropertyChanged
     private double _repeatDurationSeconds = 10;
     private int _x = 500;
     private int _y = 300;
+    private int _relativeX = 10;
+    private int _relativeY = 0;
 
     public Guid Id { get; set; } = Guid.NewGuid();
     public MacroStepType Type { get; set; }
@@ -83,11 +86,24 @@ public sealed class MacroStep : INotifyPropertyChanged
         set => SetField(ref _y, value);
     }
 
+    public int RelativeX
+    {
+        get => _relativeX;
+        set => SetField(ref _relativeX, value);
+    }
+
+    public int RelativeY
+    {
+        get => _relativeY;
+        set => SetField(ref _relativeY, value);
+    }
+
     public string TypeLabel => Type switch
     {
         MacroStepType.KeyPress => "⌨ キー入力",
         MacroStepType.MouseClick => "🖱 マウスクリック",
-        MacroStepType.MouseMove => "↗ マウス移動",
+        MacroStepType.MouseMove => "↗ マウス移動（座標）",
+        MacroStepType.MouseMoveRelative => "↔ マウス相対移動",
         MacroStepType.Wait => "⏱ 待機",
         MacroStepType.Repeat => "🔁 繰り返し",
         _ => Type.ToString()
@@ -98,6 +114,7 @@ public sealed class MacroStep : INotifyPropertyChanged
         MacroStepType.KeyPress => $"{Key} キー / {Seconds:0.###} 秒",
         MacroStepType.MouseClick => $"{MouseButton} ボタン / {RepeatCount} 回",
         MacroStepType.MouseMove => $"X={X}, Y={Y}",
+        MacroStepType.MouseMoveRelative => $"ΔX={RelativeX}, ΔY={RelativeY}",
         MacroStepType.Wait => $"{Seconds:0.###} 秒待機",
         MacroStepType.Repeat => RepeatByDuration
             ? $"{RepeatDurationSeconds:0.###} 秒間 / 内部操作 {Children.Count} 件"
