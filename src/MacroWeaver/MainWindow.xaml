@@ -27,6 +27,7 @@
                               ItemsSource="{Binding MacroLibrary}" DisplayMemberPath="Name"
                               SelectionChanged="MacroSelector_SelectionChanged" />
                     <Button Content="＋ 新規" Click="NewMacro_Click" />
+                    <Button Content="名前変更" Click="RenameMacro_Click" />
                     <Button Content="💾 保存" Click="Save_Click" Background="#FF5B6EE1" Foreground="White" />
                     <Button Content="削除" Click="DeleteMacro_Click" />
                 </StackPanel>
