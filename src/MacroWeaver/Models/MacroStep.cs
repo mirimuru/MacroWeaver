@@ -19,6 +19,8 @@ public sealed class MacroStep : INotifyPropertyChanged
     private string _mouseButton = "Left";
     private double _seconds = 0.1;
     private int _repeatCount = 1;
+    private bool _repeatByDuration;
+    private double _repeatDurationSeconds = 10;
     private int _x = 500;
     private int _y = 300;
 
@@ -55,6 +57,18 @@ public sealed class MacroStep : INotifyPropertyChanged
     {
         get => _repeatCount;
         set => SetField(ref _repeatCount, Math.Max(0, value));
+    }
+
+    public bool RepeatByDuration
+    {
+        get => _repeatByDuration;
+        set => SetField(ref _repeatByDuration, value);
+    }
+
+    public double RepeatDurationSeconds
+    {
+        get => _repeatDurationSeconds;
+        set => SetField(ref _repeatDurationSeconds, Math.Clamp(value, 0, 86400));
     }
 
     public int X
