@@ -25,6 +25,7 @@ public sealed class MacroStep : INotifyPropertyChanged
     public Guid Id { get; set; } = Guid.NewGuid();
     public MacroStepType Type { get; set; }
     public string OrderLabel { get; set; } = "1";
+    public List<MacroStep> Children { get; set; } = [];
 
     public string Name
     {
@@ -84,7 +85,7 @@ public sealed class MacroStep : INotifyPropertyChanged
         MacroStepType.MouseClick => $"{MouseButton} ボタン / {RepeatCount} 回",
         MacroStepType.MouseMove => $"X={X}, Y={Y}",
         MacroStepType.Wait => $"{Seconds:0.###} 秒待機",
-        MacroStepType.Repeat => RepeatCount == 0 ? "無限に繰り返す" : $"{RepeatCount} 回繰り返す",
+        MacroStepType.Repeat => $"{(RepeatCount == 0 ? "無限" : RepeatCount.ToString())} 回 / 内部操作 {Children.Count} 件",
         _ => string.Empty
     };
 
