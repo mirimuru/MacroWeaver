@@ -9,7 +9,9 @@ public enum MacroStepType
     MouseClick,
     MouseMove,
     MouseMoveRelative,
+    MouseScroll,
     Wait,
+    RandomWait,
     Repeat
 }
 
@@ -26,6 +28,8 @@ public sealed class MacroStep : INotifyPropertyChanged
     private int _y = 300;
     private int _relativeX = 10;
     private int _relativeY = 0;
+    private int _scrollDelta = 120;
+    private double _randomWaitMaxSeconds = 3;
 
     public Guid Id { get; set; } = Guid.NewGuid();
     public MacroStepType Type { get; set; }
@@ -98,13 +102,27 @@ public sealed class MacroStep : INotifyPropertyChanged
         set => SetField(ref _relativeY, value);
     }
 
+    public int ScrollDelta
+    {
+        get => _scrollDelta;
+        set => SetField(ref _scrollDelta, value);
+    }
+
+    public double RandomWaitMaxSeconds
+    {
+        get => _randomWaitMaxSeconds;
+        set => SetField(ref _randomWaitMaxSeconds, Math.Clamp(value, 0, 86400));
+    }
+
     public string TypeLabel => Type switch
     {
         MacroStepType.KeyPress => "⌨ キー入力",
         MacroStepType.MouseClick => "🖱 マウスクリック",
         MacroStepType.MouseMove => "↗ マウス移動（座標）",
         MacroStepType.MouseMoveRelative => "↔ マウス相対移動",
+        MacroStepType.MouseScroll => "↕ マウスホイール",
         MacroStepType.Wait => "⏱ 待機",
+        MacroStepType.RandomWait => "🎲 ランダム待機",
         MacroStepType.Repeat => "🔁 繰り返し",
         _ => Type.ToString()
     };
@@ -115,7 +133,9 @@ public sealed class MacroStep : INotifyPropertyChanged
         MacroStepType.MouseClick => $"{MouseButton} ボタン / {RepeatCount} 回",
         MacroStepType.MouseMove => $"X={X}, Y={Y}",
         MacroStepType.MouseMoveRelative => $"ΔX={RelativeX}, ΔY={RelativeY}",
+        MacroStepType.MouseScroll => $"ホイール {ScrollDelta}",
         MacroStepType.Wait => $"{Seconds:0.###} 秒待機",
+        MacroStepType.RandomWait => $"{Seconds:0.###}～{RandomWaitMaxSeconds:0.###} 秒待機",
         MacroStepType.Repeat => RepeatByDuration
             ? $"{RepeatDurationSeconds:0.###} 秒間 / 内部操作 {Children.Count} 件"
             : $"{(RepeatCount == 0 ? "無限" : RepeatCount.ToString())} 回 / 内部操作 {Children.Count} 件",
