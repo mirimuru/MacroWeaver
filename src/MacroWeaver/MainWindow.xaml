@@ -22,12 +22,17 @@
         <Border Grid.Row="0" Background="#FF20232B" CornerRadius="12" Padding="16" Margin="0,0,0,12">
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Content="📂 読み込み" Click="Load_Click" />
+                    <TextBlock Text="使用するマクロ" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{StaticResource MutedBrush}" />
+                    <ComboBox x:Name="MacroSelector" Width="190" VerticalContentAlignment="Center"
+                              ItemsSource="{Binding MacroLibrary}" DisplayMemberPath="Name"
+                              SelectionChanged="MacroSelector_SelectionChanged" />
+                    <Button Content="＋ 新規" Click="NewMacro_Click" />
                     <Button Content="💾 保存" Click="Save_Click" Background="#FF5B6EE1" Foreground="White" />
+                    <Button Content="削除" Click="DeleteMacro_Click" />
                 </StackPanel>
                 <StackPanel>
                     <TextBlock Text="MacroWeaver" FontSize="24" FontWeight="Bold" />
-                    <TextBlock Text="視覚的に組み立てる Windows マクロエディター" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" />
+                    <TextBlock Text="マクロをアプリ内で管理・選択できるエディター" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" />
                 </StackPanel>
             </DockPanel>
         </Border>
