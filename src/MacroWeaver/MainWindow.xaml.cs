@@ -124,7 +124,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 MacroStepType.MouseClick => "マウスクリック",
                 MacroStepType.MouseMove => "マウス移動（座標）",
                 MacroStepType.MouseMoveRelative => "マウス相対移動",
+                MacroStepType.MouseScroll => "マウスホイール",
                 MacroStepType.Wait => "待機",
+                MacroStepType.RandomWait => "ランダム待機",
                 MacroStepType.Repeat => "繰り返し",
                 _ => "操作"
             }
@@ -168,7 +170,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void AddClick_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.MouseClick);
     private void AddMove_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.MouseMove);
     private void AddRelativeMove_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.MouseMoveRelative);
+    private void AddScroll_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.MouseScroll);
     private void AddWait_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.Wait);
+    private void AddRandomWait_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.RandomWait);
     private void AddRepeat_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.Repeat);
 
     private void Delete_Click(object sender, RoutedEventArgs e)
@@ -198,6 +202,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Y = original.Y,
         RelativeX = original.RelativeX,
         RelativeY = original.RelativeY,
+        ScrollDelta = original.ScrollDelta,
+        RandomWaitMaxSeconds = original.RandomWaitMaxSeconds,
         Children = original.Children.Select(CloneStep).ToList()
     };
 
@@ -269,7 +275,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ClickPanel.Visibility = hasStep && step!.Type == MacroStepType.MouseClick ? Visibility.Visible : Visibility.Collapsed;
         MovePanel.Visibility = hasStep && step!.Type == MacroStepType.MouseMove ? Visibility.Visible : Visibility.Collapsed;
         RelativeMovePanel.Visibility = hasStep && step!.Type == MacroStepType.MouseMoveRelative ? Visibility.Visible : Visibility.Collapsed;
+        ScrollPanel.Visibility = hasStep && step!.Type == MacroStepType.MouseScroll ? Visibility.Visible : Visibility.Collapsed;
         WaitPanel.Visibility = hasStep && step!.Type == MacroStepType.Wait ? Visibility.Visible : Visibility.Collapsed;
+        RandomWaitPanel.Visibility = hasStep && step!.Type == MacroStepType.RandomWait ? Visibility.Visible : Visibility.Collapsed;
         RepeatPanel.Visibility = hasStep && step!.Type == MacroStepType.Repeat ? Visibility.Visible : Visibility.Collapsed;
 
         NameBox.Text = step?.Name ?? string.Empty;
@@ -280,6 +288,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         YBox.Text = (step?.Y ?? 300).ToString(CultureInfo.InvariantCulture);
         RelativeXBox.Text = (step?.RelativeX ?? 10).ToString(CultureInfo.InvariantCulture);
         RelativeYBox.Text = (step?.RelativeY ?? 0).ToString(CultureInfo.InvariantCulture);
+        ScrollDeltaBox.Text = (step?.ScrollDelta ?? 120).ToString(CultureInfo.InvariantCulture);
+        RandomWaitMinBox.Text = (step?.Seconds ?? 1).ToString(CultureInfo.InvariantCulture);
+        RandomWaitMaxBox.Text = (step?.RandomWaitMaxSeconds ?? 3).ToString(CultureInfo.InvariantCulture);
         WaitSecondsBox.Text = (step?.Seconds ?? 1).ToString(CultureInfo.InvariantCulture);
         RepeatCountBox.Text = (step?.RepeatCount ?? 3).ToString(CultureInfo.InvariantCulture);
         RepeatDurationCheck.IsChecked = step?.RepeatByDuration ?? false;
@@ -334,9 +345,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (int.TryParse(RelativeXBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var relativeX)) step.RelativeX = relativeX;
             if (int.TryParse(RelativeYBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var relativeY)) step.RelativeY = relativeY;
         }
+        else if (step.Type == MacroStepType.MouseScroll)
+        {
+            if (int.TryParse(ScrollDeltaBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var delta)) step.ScrollDelta = delta;
+        }
         else if (step.Type == MacroStepType.Wait)
         {
             if (double.TryParse(WaitSecondsBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)) step.Seconds = Math.Clamp(seconds, 0, 86400);
+        }
+        else if (step.Type == MacroStepType.RandomWait)
+        {
+            if (double.TryParse(RandomWaitMinBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var minimum)) step.Seconds = Math.Clamp(minimum, 0, 86400);
+            if (double.TryParse(RandomWaitMaxBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var maximum)) step.RandomWaitMaxSeconds = Math.Clamp(maximum, step.Seconds, 86400);
         }
         else if (step.Type == MacroStepType.Repeat)
         {
