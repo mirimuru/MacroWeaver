@@ -46,11 +46,15 @@
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0" Background="#FF20232B" CornerRadius="12" Padding="12" Margin="0,0,12,0">
-                <DockPanel LastChildFill="True">
-                    <TextBlock DockPanel.Dock="Top" Text="操作を追加" FontSize="16" FontWeight="SemiBold" Margin="4,4,4,12" />
-                    <TextBlock DockPanel.Dock="Bottom" Text="操作を選択すると、右側で詳細を編集できます。" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="4,12,4,4" />
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                                  CanContentScroll="True">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="操作を追加" FontSize="16" FontWeight="SemiBold" Margin="4,4,4,12" />
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled"
+                                  CanContentScroll="False" PanningMode="VerticalOnly">
                         <StackPanel>
                             <Button Content="⌨  キー入力" Click="AddKey_Click" HorizontalContentAlignment="Left" />
                             <Button Content="🖱  マウスクリック" Click="AddClick_Click" HorizontalContentAlignment="Left" />
@@ -68,16 +72,21 @@
                             <Button Content="－  削除" Click="Delete_Click" HorizontalContentAlignment="Left" />
                         </StackPanel>
                     </ScrollViewer>
-                </DockPanel>
+                    <TextBlock Grid.Row="2" Text="操作を選択すると、右側で詳細を編集できます。" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="4,12,4,4" />
+                </Grid>
             </Border>
 
             <Border Grid.Column="1" Background="#FF20232B" CornerRadius="12" Padding="12" Margin="0,0,12,0">
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="4,4,4,12">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,4,4,12">
                         <TextBlock Text="マクロの手順" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
                         <TextBlock x:Name="StepCountText" Text="0 操作" Foreground="{StaticResource MutedBrush}" Margin="12,2,0,0" VerticalAlignment="Center" />
                     </StackPanel>
-                    <DataGrid x:Name="StepsGrid" ItemsSource="{Binding VisibleSteps}" SelectedItem="{Binding SelectedStep, Mode=TwoWay}"
+                    <DataGrid Grid.Row="1" x:Name="StepsGrid" ItemsSource="{Binding VisibleSteps}" SelectedItem="{Binding SelectedStep, Mode=TwoWay}"
                               AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                               ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto"
                               ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
@@ -125,7 +134,7 @@
                             <DataGridTextColumn Header="設定" Binding="{Binding Summary}" Width="190" IsReadOnly="True" />
                         </DataGrid.Columns>
                     </DataGrid>
-                </DockPanel>
+                </Grid>
             </Border>
 
             <Border Grid.Column="2" Background="#FF20232B" CornerRadius="12" Padding="16">
