@@ -104,6 +104,9 @@ public sealed class MacroExecutionService
                     if (!SetCursorPos(step.X, step.Y))
                         throw new InvalidOperationException($"マウスを座標 ({step.X}, {step.Y}) に移動できませんでした。");
                     break;
+                case MacroStepType.MouseMoveRelative:
+                    MoveMouseRelative(step.RelativeX, step.RelativeY);
+                    break;
                 case MacroStepType.MouseClick:
                     for (var click = 0; click < Math.Clamp(step.RepeatCount, 1, 10000); click++)
                     {
@@ -180,6 +183,26 @@ public sealed class MacroExecutionService
         SendInput(1, [input], Marshal.SizeOf<INPUT>());
     }
 
+    private static void MoveMouseRelative(int deltaX, int deltaY)
+    {
+        var input = new INPUT
+        {
+            type = 0,
+            U = new InputUnion
+            {
+                mi = new MOUSEINPUT
+                {
+                    dx = deltaX,
+                    dy = deltaY,
+                    dwFlags = (uint)MouseEventFlags.Move
+                }
+            }
+        };
+
+        if (SendInput(1, [input], Marshal.SizeOf<INPUT>()) != 1)
+            throw new InvalidOperationException("マウスの相対移動を送信できませんでした。");
+    }
+
     private static void SendMouse(MouseEventFlags flags)
     {
         var input = new INPUT
@@ -230,7 +253,7 @@ public sealed class MacroExecutionService
     [Flags]
     private enum MouseEventFlags : uint
     {
-        LeftDown = 0x0002, LeftUp = 0x0004,
+        Move = 0x0001,\n        LeftDown = 0x0002, LeftUp = 0x0004,
         RightDown = 0x0008, RightUp = 0x0010,
         MiddleDown = 0x0020, MiddleUp = 0x0040
     }
