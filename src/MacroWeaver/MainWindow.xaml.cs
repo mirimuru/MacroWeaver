@@ -14,6 +14,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 {
     private MacroStep? _selectedStep;
     private bool _updatingProperties;
+    private readonly MacroExecutionService _executionService = new();
+    private bool _stopRequested;
 
     public ObservableCollection<MacroStep> Steps { get; } = [];
 
@@ -175,7 +177,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         else if (step.Type == MacroStepType.MouseClick)
         {
             if (MouseButtonBox.SelectedItem is ComboBoxItem item) step.MouseButton = item.Content?.ToString() ?? "Left";
-            if (int.TryParse(ClickCountBox.Text, out var count)) step.RepeatCount = Math.Max(1, count);
+            if (int.TryParse(ClickCountBox.Text, out var count)) step.RepeatCount = Math.Clamp(count, 1, 10000);
         }
         else if (step.Type == MacroStepType.MouseMove)
         {
@@ -184,7 +186,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         else if (step.Type == MacroStepType.Wait)
         {
-            if (double.TryParse(WaitSecondsBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)) step.Seconds = Math.Max(0, seconds);
+            if (double.TryParse(WaitSecondsBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds)) step.Seconds = Math.Clamp(seconds, 0, 86400);
         }
         else if (step.Type == MacroStepType.Repeat)
         {
@@ -212,6 +214,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void Load_Click(object sender, RoutedEventArgs e)
     {
+        if (_executionService.IsRunning)
+        {
+            MessageBox.Show(this, "実行中はマクロを読み込めません。先に停止してください。", "実行中", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
         var dialog = new OpenFileDialog { Title = "マクロを読み込み", Filter = "MacroWeaver マクロ (*.json)|*.json|すべてのファイル (*.*)|*.*", DefaultExt = ".json" };
         if (dialog.ShowDialog(this) != true) return;
         try
@@ -229,12 +236,73 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private void Run_Click(object sender, RoutedEventArgs e)
-        => StatusText.Text = "実行エンジンは未実装です。次の段階で安全な停止制御とともに追加します。";
+    private async void Run_Click(object sender, RoutedEventArgs e)
+    {
+        if (_executionService.IsRunning) return;
+        if (Steps.Count == 0)
+        {
+            StatusText.Text = "実行する操作がありません。";
+            return;
+        }
+
+        var repeatIndex = Steps.ToList().FindIndex(s => s.Type == MacroStepType.Repeat);
+        if (repeatIndex >= 0 && repeatIndex == Steps.Count - 1)
+        {
+            MessageBox.Show(this, "繰り返しの後に実行する操作がありません。繰り返しの前に操作を置き、繰り返し行をその直前に配置してください。", "手順を確認", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        if (Steps.Any(s => s.Type == MacroStepType.Repeat && s.RepeatCount == 0))
+        {
+            var result = MessageBox.Show(this, "回数が 0 の繰り返しは停止するまで無限に実行されます。続行しますか？", "無限ループの確認", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes) return;
+        }
+
+        // Snapshot settings so edits during execution do not change the running macro.
+        var snapshot = Steps.Select(s => new MacroStep
+        {
+            Type = s.Type, Name = s.Name, Key = s.Key, MouseButton = s.MouseButton,
+            Seconds = s.Seconds, RepeatCount = s.RepeatCount, X = s.X, Y = s.Y
+        }).ToList();
+
+        _stopRequested = false;
+        var progress = new Progress<string>(message => StatusText.Text = message);
+        StatusText.Text = "マクロを開始します。実行中はマウス・キーボードが実際に操作されます。";
+        try
+        {
+            await _executionService.RunAsync(snapshot, progress);
+            StatusText.Text = _stopRequested ? "マクロを停止しました。" : "マクロが完了しました。";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = "マクロを停止しました。";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "マクロ実行中にエラーが発生しました。";
+            MessageBox.Show(this, $"マクロの実行に失敗しました。\n{ex.Message}", "実行エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 
     private void Pause_Click(object sender, RoutedEventArgs e)
-        => StatusText.Text = "一時停止は実行エンジンの実装後に利用できます。";
+    {
+        if (!_executionService.IsRunning) return;
+        if (_executionService.IsPaused)
+        {
+            _executionService.Resume();
+            StatusText.Text = "マクロを再開しました。";
+        }
+        else
+        {
+            _executionService.Pause();
+            StatusText.Text = "マクロを一時停止しました。";
+        }
+    }
 
     private void Stop_Click(object sender, RoutedEventArgs e)
-        => StatusText.Text = "停止しました（現在は編集画面のみ動作します）。";
+    {
+        if (!_executionService.IsRunning) return;
+        _stopRequested = true;
+        _executionService.Stop();
+        StatusText.Text = "停止要求を送信しました…";
+    }
 }
