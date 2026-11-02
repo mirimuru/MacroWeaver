@@ -266,7 +266,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (int.TryParse(RepeatCountBox.Text, out var count)) step.RepeatCount = Math.Max(0, count);
         }
         step.RefreshComputedProperties();
-        RefreshOrderLabels();
+        // Property edits do not change the tree structure. Refreshing VisibleSteps here
+        // clears and repopulates the bound collection on every keystroke, which drops
+        // the DataGrid selection. Refresh only the displayed cell values instead.
+        StepsGrid.Items.Refresh();
     }
 
     private async void Save_Click(object sender, RoutedEventArgs e)
