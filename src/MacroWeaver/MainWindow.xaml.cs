@@ -491,6 +491,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         try
         {
+            // Suppress SelectionChanged while the selected entry is removed and
+            // the replacement entry is selected below.
+            _loadingMacro = true;
             File.Delete(GetMacroPath(selected.Id));
             MacroLibrary.Remove(selected);
             if (MacroLibrary.Count == 0)
@@ -514,6 +517,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 ReplaceCurrentSteps(document.Steps);
                 _loadingMacro = false;
             }
+            _loadingMacro = false;
             StatusText.Text = $"「{selected.Name}」を削除しました。";
         }
         catch (Exception ex)
