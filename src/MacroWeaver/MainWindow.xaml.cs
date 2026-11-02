@@ -10,15 +10,26 @@ using MacroWeaver.Services;
 
 namespace MacroWeaver;
 
+public sealed class MacroLibraryItem
+{
+    public string Id { get; set; } = "";
+    public string Name { get; set; } = "";
+}
+
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
     private MacroStep? _selectedStep;
     private bool _updatingProperties;
     private readonly MacroExecutionService _executionService = new();
     private bool _stopRequested;
+    private bool _loadingMacro;
+    private string? _currentMacroId;
+    private readonly string _macroLibraryDirectory = System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacroWeaver", "Macros");
 
     public ObservableCollection<MacroStep> Steps { get; } = [];
     public ObservableCollection<MacroStep> VisibleSteps { get; } = [];
+    public ObservableCollection<MacroLibraryItem> MacroLibrary { get; } = [];
 
     public MacroStep? SelectedStep
     {
@@ -44,6 +55,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         AddStep(MacroStepType.Wait);
         StepsGrid.SelectedIndex = 0;
         RefreshOrderLabels();
+        Loaded += MainWindow_Loaded;
     }
 
     private void Steps_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => RefreshOrderLabels();
@@ -314,44 +326,199 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         StepsGrid.Items.Refresh();
     }
 
-    private async void Save_Click(object sender, RoutedEventArgs e)
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
-        var dialog = new SaveFileDialog { Title = "マクロを保存", Filter = "MacroWeaver マクロ (*.json)|*.json", FileName = "macro.json", DefaultExt = ".json" };
-        if (dialog.ShowDialog(this) != true) return;
+        _loadingMacro = true;
         try
         {
-            var document = new MacroDocument { Name = System.IO.Path.GetFileNameWithoutExtension(dialog.FileName), Steps = Steps.ToList() };
-            await MacroDocumentService.SaveAsync(dialog.FileName, document);
-            StatusText.Text = $"保存しました：{dialog.FileName}";
+            Directory.CreateDirectory(_macroLibraryDirectory);
+            foreach (var path in Directory.GetFiles(_macroLibraryDirectory, "*.json"))
+            {
+                try
+                {
+                    var document = await MacroDocumentService.LoadAsync(path);
+                    MacroLibrary.Add(new MacroLibraryItem
+                    {
+                        Id = System.IO.Path.GetFileNameWithoutExtension(path),
+                        Name = document.Name
+                    });
+                }
+                catch
+                {
+                    // Ignore damaged entries so one bad macro does not prevent startup.
+                }
+            }
+
+            if (MacroLibrary.Count == 0)
+            {
+                var initial = new MacroLibraryItem { Id = Guid.NewGuid().ToString("N"), Name = "マクロ 1" };
+                MacroLibrary.Add(initial);
+                _currentMacroId = initial.Id;
+                await SaveCurrentMacroAsync();
+                MacroSelector.SelectedItem = initial;
+                StatusText.Text = "初期マクロを作成しました。編集後は「保存」を押してください。";
+            }
+            else
+            {
+                var first = MacroLibrary[0];
+                MacroSelector.SelectedItem = first;
+                _currentMacroId = first.Id;
+                var document = await MacroDocumentService.LoadAsync(GetMacroPath(first.Id));
+                ReplaceCurrentSteps(document.Steps);
+                StatusText.Text = $"「{first.Name}」を読み込みました。";
+            }
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"保存に失敗しました。\n{ex.Message}", "保存エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, $"マクロ一覧の読み込みに失敗しました。\\n{ex.Message}", "読み込みエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            _loadingMacro = false;
         }
     }
 
-    private async void Load_Click(object sender, RoutedEventArgs e)
+    private string GetMacroPath(string id) => System.IO.Path.Combine(_macroLibraryDirectory, $"{id}.json");
+
+    private void ReplaceCurrentSteps(IEnumerable<MacroStep> steps)
     {
-        if (_executionService.IsRunning)
+        Steps.Clear();
+        foreach (var step in steps) Steps.Add(step);
+        RefreshOrderLabels();
+        SelectedStep = VisibleSteps.FirstOrDefault();
+        StepsGrid.SelectedItem = SelectedStep;
+    }
+
+    private async Task SaveCurrentMacroAsync()
+    {
+        Directory.CreateDirectory(_macroLibraryDirectory);
+        var item = MacroLibrary.FirstOrDefault(m => m.Id == _currentMacroId);
+        if (item is null)
         {
-            MessageBox.Show(this, "実行中はマクロを読み込めません。先に停止してください。", "実行中", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
+            item = new MacroLibraryItem { Id = Guid.NewGuid().ToString("N"), Name = $"マクロ {MacroLibrary.Count + 1}" };
+            MacroLibrary.Add(item);
+            _currentMacroId = item.Id;
         }
-        var dialog = new OpenFileDialog { Title = "マクロを読み込み", Filter = "MacroWeaver マクロ (*.json)|*.json|すべてのファイル (*.*)|*.*", DefaultExt = ".json" };
-        if (dialog.ShowDialog(this) != true) return;
+
+        var document = new MacroDocument { Name = item.Name, Steps = Steps.ToList() };
+        await MacroDocumentService.SaveAsync(GetMacroPath(item.Id), document);
+    }
+
+    private async void Save_Click(object sender, RoutedEventArgs e)
+    {
         try
         {
-            var document = await MacroDocumentService.LoadAsync(dialog.FileName);
-            Steps.Clear();
-            foreach (var step in document.Steps) Steps.Add(step);
-            RefreshOrderLabels();
-            SelectedStep = VisibleSteps.FirstOrDefault();
-            StepsGrid.SelectedItem = SelectedStep;
-            StatusText.Text = $"読み込みました：{dialog.FileName}";
+            await SaveCurrentMacroAsync();
+            StatusText.Text = $"「{MacroLibrary.First(m => m.Id == _currentMacroId).Name}」を保存しました。";
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"読み込みに失敗しました。\n{ex.Message}", "読み込みエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, $"保存に失敗しました。\\n{ex.Message}", "保存エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void MacroSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loadingMacro || MacroSelector.SelectedItem is not MacroLibraryItem selected) return;
+        if (_executionService.IsRunning)
+        {
+            MessageBox.Show(this, "実行中はマクロを切り替えられません。先に停止してください。", "実行中", MessageBoxButton.OK, MessageBoxImage.Information);
+            _loadingMacro = true;
+            MacroSelector.SelectedItem = MacroLibrary.FirstOrDefault(m => m.Id == _currentMacroId);
+            _loadingMacro = false;
+            return;
+        }
+
+        try
+        {
+            if (_currentMacroId is not null)
+                await SaveCurrentMacroAsync();
+
+            var document = await MacroDocumentService.LoadAsync(GetMacroPath(selected.Id));
+            _loadingMacro = true;
+            _currentMacroId = selected.Id;
+            ReplaceCurrentSteps(document.Steps);
+            _loadingMacro = false;
+            StatusText.Text = $"「{selected.Name}」に切り替えました。";
+        }
+        catch (Exception ex)
+        {
+            _loadingMacro = false;
+            MessageBox.Show(this, $"マクロの切り替えに失敗しました。\\n{ex.Message}", "切り替えエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void NewMacro_Click(object sender, RoutedEventArgs e)
+    {
+        if (_executionService.IsRunning)
+        {
+            MessageBox.Show(this, "実行中は新しいマクロを作成できません。", "実行中", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            await SaveCurrentMacroAsync();
+            var number = 1;
+            while (MacroLibrary.Any(m => m.Name == $"マクロ {number}")) number++;
+            var item = new MacroLibraryItem { Id = Guid.NewGuid().ToString("N"), Name = $"マクロ {number}" };
+            MacroLibrary.Add(item);
+            _loadingMacro = true;
+            _currentMacroId = item.Id;
+            ReplaceCurrentSteps([]);
+            MacroSelector.SelectedItem = item;
+            _loadingMacro = false;
+            await SaveCurrentMacroAsync();
+            StatusText.Text = $"新しいマクロ「{item.Name}」を作成しました。";
+        }
+        catch (Exception ex)
+        {
+            _loadingMacro = false;
+            MessageBox.Show(this, $"新規作成に失敗しました。\\n{ex.Message}", "作成エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void DeleteMacro_Click(object sender, RoutedEventArgs e)
+    {
+        if (MacroSelector.SelectedItem is not MacroLibraryItem selected) return;
+        if (_executionService.IsRunning)
+        {
+            MessageBox.Show(this, "実行中はマクロを削除できません。", "実行中", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (MessageBox.Show(this, $"マクロ「{selected.Name}」を削除しますか？", "マクロの削除", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes) return;
+
+        try
+        {
+            File.Delete(GetMacroPath(selected.Id));
+            MacroLibrary.Remove(selected);
+            if (MacroLibrary.Count == 0)
+            {
+                var item = new MacroLibraryItem { Id = Guid.NewGuid().ToString("N"), Name = "マクロ 1" };
+                MacroLibrary.Add(item);
+                _loadingMacro = true;
+                _currentMacroId = item.Id;
+                ReplaceCurrentSteps([]);
+                MacroSelector.SelectedItem = item;
+                _loadingMacro = false;
+                await SaveCurrentMacroAsync();
+            }
+            else
+            {
+                var next = MacroLibrary[0];
+                _loadingMacro = true;
+                _currentMacroId = next.Id;
+                MacroSelector.SelectedItem = next;
+                var document = await MacroDocumentService.LoadAsync(GetMacroPath(next.Id));
+                ReplaceCurrentSteps(document.Steps);
+                _loadingMacro = false;
+            }
+            StatusText.Text = $"「{selected.Name}」を削除しました。";
+        }
+        catch (Exception ex)
+        {
+            _loadingMacro = false;
+            MessageBox.Show(this, $"削除に失敗しました。\\n{ex.Message}", "削除エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
