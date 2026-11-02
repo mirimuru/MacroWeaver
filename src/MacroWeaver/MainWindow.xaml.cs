@@ -73,7 +73,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void UpdateStepCount() => StepCountText.Text = $"{CountSteps(Steps)} 操作";
 
-    private List<MacroStep> FindContainingList(MacroStep target, List<MacroStep>? current = null)
+    private IList<MacroStep> FindContainingList(MacroStep target, IList<MacroStep>? current = null)
     {
         current ??= Steps;
         if (current.Contains(target)) return current;
@@ -103,7 +103,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
         };
 
-        List<MacroStep> destination;
+        IList<MacroStep> destination;
         if (SelectedStep?.Type == MacroStepType.Repeat)
         {
             destination = SelectedStep.Children;
@@ -125,7 +125,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         SelectedStep = step;
         StepsGrid.SelectedItem = step;
         StepsGrid.ScrollIntoView(step);
-        StatusText.Text = SelectedStep is not null && FindContainingList(step) != Steps
+        StatusText.Text = SelectedStep is not null && !ReferenceEquals(FindContainingList(step), Steps)
             ? $"「{step.Name}」を追加しました。繰り返しの内部に追加するには、繰り返し行を選択してから操作を追加してください。"
             : $"「{step.Name}」を追加しました。";
     }
