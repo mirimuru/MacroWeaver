@@ -60,7 +60,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void AddStep(MacroStepType type)
     {
-        var step = new MacroStep { Type = type, Name = type switch
+        var step = new MacroStep { Type = type, Seconds = type == MacroStepType.Wait ? 1 : 0.1, RepeatCount = type == MacroStepType.Repeat ? 3 : 1, Name = type switch
         {
             MacroStepType.KeyPress => "キー入力",
             MacroStepType.MouseClick => "マウスクリック",
