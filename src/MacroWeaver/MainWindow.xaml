@@ -39,6 +39,7 @@
                         <Button Content="↗  マウス移動" Click="AddMove_Click" HorizontalContentAlignment="Left" />
                         <Button Content="⏱  待機" Click="AddWait_Click" HorizontalContentAlignment="Left" />
                         <Button Content="🔁  繰り返し" Click="AddRepeat_Click" HorizontalContentAlignment="Left" />
+                        <CheckBox x:Name="AddAtRootCheck" Content="最上位に追加（繰り返しの外）" Margin="4,4,4,10" ToolTip="チェックすると、選択中の繰り返しの内部ではなく、最上位の手順に追加します。" />
                         <Separator Margin="3,12" />
                         <Button Content="↑  上へ移動" Click="MoveUp_Click" HorizontalContentAlignment="Left" />
                         <Button Content="↓  下へ移動" Click="MoveDown_Click" HorizontalContentAlignment="Left" />
