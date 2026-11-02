@@ -75,12 +75,18 @@ public sealed class MacroExecutionService
 
                 var count = step.RepeatCount;
                 var iteration = 0;
-                while (count == 0 || iteration < count)
+                var durationMode = step.RepeatByDuration;
+                var duration = TimeSpan.FromSeconds(Math.Clamp(step.RepeatDurationSeconds, 0, 86400));
+                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+                while (durationMode ? stopwatch.Elapsed < duration : count == 0 || iteration < count)
                 {
                     token.ThrowIfCancellationRequested();
                     await WaitIfPausedAsync(token);
+                    if (durationMode && stopwatch.Elapsed >= duration) break;
                     iteration++;
-                    progress?.Report($"{step.Name}：{iteration}{(count == 0 ? " / ∞" : $" / {count}")}");
+                    progress?.Report(durationMode
+                        ? $"{step.Name}：{stopwatch.Elapsed.TotalSeconds:0.0} / {duration.TotalSeconds:0.###} 秒"
+                        : $"{step.Name}：{iteration}{(count == 0 ? " / ∞" : $" / {count}")}");
                     await ExecuteStepsAsync(step.Children, progress, token, depth + 1);
                 }
                 continue;
