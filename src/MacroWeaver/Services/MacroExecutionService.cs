@@ -1,4 +1,3 @@
-using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
 using MacroWeaver.Models;
@@ -43,7 +42,7 @@ public sealed class MacroExecutionService
 
         try
         {
-            await ExecuteRangeAsync(steps, 0, steps.Count, progress, _runCts.Token);
+            await ExecuteStepsAsync(steps, progress, _runCts.Token, 0);
         }
         finally
         {
@@ -55,18 +54,25 @@ public sealed class MacroExecutionService
         }
     }
 
-    private async Task ExecuteRangeAsync(IReadOnlyList<MacroStep> steps, int start, int end, IProgress<string>? progress, CancellationToken token)
+    private async Task ExecuteStepsAsync(IReadOnlyList<MacroStep> steps, IProgress<string>? progress, CancellationToken token, int depth)
     {
-        for (var i = start; i < end; i++)
+        if (depth > 32) throw new InvalidOperationException("繰り返しの入れ子が深すぎます（最大32階層）。");
+
+        for (var i = 0; i < steps.Count; i++)
         {
             token.ThrowIfCancellationRequested();
             await WaitIfPausedAsync(token);
             var step = steps[i];
-            progress?.Report($"実行中：{i + 1}/{end} — {step.Name}");
+            progress?.Report($"実行中：{step.Name}");
 
             if (step.Type == MacroStepType.Repeat)
             {
-                // Repeat acts as a loop marker: repeat all steps after it through the end.
+                if (step.Children.Count == 0)
+                {
+                    progress?.Report($"スキップ：{step.Name}（内部操作がありません）");
+                    continue;
+                }
+
                 var count = step.RepeatCount;
                 var iteration = 0;
                 while (count == 0 || iteration < count)
@@ -74,10 +80,10 @@ public sealed class MacroExecutionService
                     token.ThrowIfCancellationRequested();
                     await WaitIfPausedAsync(token);
                     iteration++;
-                    progress?.Report($"繰り返し {iteration}{(count == 0 ? " / ∞" : $" / {count}")}");
-                    await ExecuteRangeAsync(steps, i + 1, end, progress, token);
+                    progress?.Report($"{step.Name}：{iteration}{(count == 0 ? " / ∞" : $" / {count}")}");
+                    await ExecuteStepsAsync(step.Children, progress, token, depth + 1);
                 }
-                return;
+                continue;
             }
 
             switch (step.Type)
@@ -89,7 +95,8 @@ public sealed class MacroExecutionService
                     await PressKeyAsync(step.Key, step.Seconds, token);
                     break;
                 case MacroStepType.MouseMove:
-                    SetCursorPos(step.X, step.Y);
+                    if (!SetCursorPos(step.X, step.Y))
+                        throw new InvalidOperationException($"マウスを座標 ({step.X}, {step.Y}) に移動できませんでした。");
                     break;
                 case MacroStepType.MouseClick:
                     for (var click = 0; click < Math.Clamp(step.RepeatCount, 1, 10000); click++)
@@ -97,7 +104,8 @@ public sealed class MacroExecutionService
                         token.ThrowIfCancellationRequested();
                         await WaitIfPausedAsync(token);
                         ClickMouse(step.MouseButton);
-                        if (click + 1 < step.RepeatCount) await DelayWithPauseAsync(TimeSpan.FromMilliseconds(80), token);
+                        if (click + 1 < step.RepeatCount)
+                            await DelayWithPauseAsync(TimeSpan.FromMilliseconds(80), token);
                     }
                     break;
             }
@@ -108,6 +116,7 @@ public sealed class MacroExecutionService
     {
         if (!Enum.TryParse<Key>(keyName, true, out var key) || key == Key.None)
             throw new InvalidOperationException($"キー名「{keyName}」を認識できません。例：A、Enter、Space、F5");
+
         var virtualKey = (ushort)KeyInterop.VirtualKeyFromKey(key);
         SendKey(virtualKey, false);
         try
@@ -130,13 +139,12 @@ public sealed class MacroExecutionService
             var slice = remaining > TimeSpan.FromMilliseconds(50) ? TimeSpan.FromMilliseconds(50) : remaining;
             var before = System.Diagnostics.Stopwatch.GetTimestamp();
             await Task.Delay(slice, token);
-            var elapsed = System.Diagnostics.Stopwatch.GetElapsedTime(before);
-            remaining -= elapsed;
+            remaining -= System.Diagnostics.Stopwatch.GetElapsedTime(before);
         }
     }
 
     private Task WaitIfPausedAsync(CancellationToken token)
-        => Task.Run(() => { _pauseGate.Wait(token); }, token);
+        => Task.Run(() => _pauseGate.Wait(token), token);
 
     private static void ClickMouse(string button)
     {
