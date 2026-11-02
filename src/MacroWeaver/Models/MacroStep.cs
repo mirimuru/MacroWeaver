@@ -24,6 +24,7 @@ public sealed class MacroStep : INotifyPropertyChanged
 
     public Guid Id { get; set; } = Guid.NewGuid();
     public MacroStepType Type { get; set; }
+    public string OrderLabel { get; set; } = "1";
 
     public string Name
     {
