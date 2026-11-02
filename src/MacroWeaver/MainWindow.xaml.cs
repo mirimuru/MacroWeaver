@@ -191,17 +191,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void MoveSelected(int offset)
     {
-        if (SelectedStep is null) return;
-        var parent = FindContainingList(SelectedStep);
-        var oldIndex = parent.IndexOf(SelectedStep);
+        // RefreshOrderLabels clears and rebuilds VisibleSteps. The DataGrid can
+        // temporarily clear its selection during that refresh, so preserve the
+        // selected item and restore it only after the collection has been rebuilt.
+        var item = SelectedStep;
+        if (item is null) return;
+
+        var parent = FindContainingList(item);
+        var oldIndex = parent.IndexOf(item);
+        if (oldIndex < 0) return;
+
         var newIndex = oldIndex + offset;
         if (newIndex < 0 || newIndex >= parent.Count) return;
-        var item = parent[oldIndex];
+
         parent.RemoveAt(oldIndex);
         parent.Insert(newIndex, item);
+
         RefreshOrderLabels();
-        StepsGrid.SelectedItem = SelectedStep;
-        StepsGrid.ScrollIntoView(SelectedStep);
+        SelectedStep = item;
+        StepsGrid.SelectedItem = item;
+        StepsGrid.ScrollIntoView(item);
         StatusText.Text = "同じ階層内で操作の順番を変更しました。";
     }
 
