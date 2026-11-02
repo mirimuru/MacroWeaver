@@ -11,10 +11,23 @@ using MacroWeaver.Services;
 
 namespace MacroWeaver;
 
-public sealed class MacroLibraryItem
+public sealed class MacroLibraryItem : INotifyPropertyChanged
 {
+    private string _name = "";
+
     public string Id { get; set; } = "";
-    public string Name { get; set; } = "";
+    public string Name
+    {
+        get => _name;
+        set
+        {
+            if (_name == value) return;
+            _name = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Name)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
 
 public partial class MainWindow : Window, INotifyPropertyChanged
@@ -446,6 +459,77 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             _loadingMacro = false;
             MessageBox.Show(this, $"マクロの切り替えに失敗しました。\\n{ex.Message}", "切り替えエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void RenameMacro_Click(object sender, RoutedEventArgs e)
+    {
+        if (MacroSelector.SelectedItem is not MacroLibraryItem selected) return;
+        if (_executionService.IsRunning)
+        {
+            MessageBox.Show(this, "実行中はマクロ名を変更できません。先に停止してください。", "実行中", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var input = new TextBox
+        {
+            Text = selected.Name,
+            MinWidth = 300,
+            Margin = new Thickness(0, 8, 0, 12),
+            Padding = new Thickness(8, 6, 8, 6)
+        };
+        input.SelectAll();
+
+        var okButton = new Button { Content = "変更", Width = 84, IsDefault = true, Margin = new Thickness(0, 0, 8, 0) };
+        var cancelButton = new Button { Content = "キャンセル", Width = 92, IsCancel = true };
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Children = { okButton, cancelButton }
+        };
+        var panel = new StackPanel { Margin = new Thickness(16) };
+        panel.Children.Add(new TextBlock { Text = "新しいマクロ名を入力してください。" });
+        panel.Children.Add(input);
+        panel.Children.Add(buttons);
+
+        var dialog = new Window
+        {
+            Title = "マクロ名の変更",
+            Content = panel,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            ResizeMode = ResizeMode.NoResize,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = this,
+            Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString("#FF20232B")!,
+            Foreground = System.Windows.Media.Brushes.White
+        };
+        okButton.Click += (_, _) => dialog.DialogResult = true;
+        dialog.Loaded += (_, _) => input.Focus();
+
+        if (dialog.ShowDialog() != true) return;
+
+        var newName = input.Text.Trim();
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            MessageBox.Show(this, "マクロ名を空欄にはできません。", "入力エラー", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        if (MacroLibrary.Any(m => m.Id != selected.Id && string.Equals(m.Name, newName, StringComparison.OrdinalIgnoreCase)))
+        {
+            MessageBox.Show(this, "同じ名前のマクロが既に存在します。別の名前を指定してください。", "名前の重複", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        try
+        {
+            selected.Name = newName;
+            await SaveCurrentMacroAsync();
+            StatusText.Text = $"マクロ名を「{newName}」に変更しました。";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, $"マクロ名の保存に失敗しました。\\n{ex.Message}", "名前変更エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
