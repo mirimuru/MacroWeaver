@@ -206,14 +206,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void InputRecorder_StepRecorded(MacroStep step)
     {
-        Dispatcher.BeginInvoke(() =>
+        Dispatcher.BeginInvoke(new Action(() =>
         {
-            if (_inputRecorder?.IsRecording != true) return;
+            // The hook may queue an event just before recording stops. Keep that
+            // final event instead of discarding it when the dispatcher runs later.
             Steps.Add(step);
             RefreshOrderLabels();
             StepsGrid.SelectedItem = step;
             StepsGrid.ScrollIntoView(step);
-        });
+        }));
     }
 
     private void MainWindow_Closing(object? sender, CancelEventArgs e)
