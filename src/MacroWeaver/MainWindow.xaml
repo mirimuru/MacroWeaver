@@ -223,6 +223,8 @@
         <Border Grid.Row="2" Background="#FF20232B" CornerRadius="10" Padding="10" Margin="0,12,0,0">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                    <Button x:Name="StartRecordingButton" Content="● 記録開始" Click="StartRecording_Click" Background="#FFC04B55" Foreground="White" />
+                    <Button x:Name="StopRecordingButton" Content="■ 記録停止" Click="StopRecording_Click" IsEnabled="False" />
                     <Button Content="▶ 実行" Click="Run_Click" Background="#FF2F9E72" Foreground="White" />
                     <Button Content="Ⅱ 一時停止" Click="Pause_Click" />
                     <Button Content="■ 停止" Click="Stop_Click" />
