@@ -164,6 +164,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         MouseButton = original.MouseButton,
         Seconds = original.Seconds,
         RepeatCount = original.RepeatCount,
+        RepeatByDuration = original.RepeatByDuration,
+        RepeatDurationSeconds = original.RepeatDurationSeconds,
         X = original.X,
         Y = original.Y,
         Children = original.Children.Select(CloneStep).ToList()
@@ -228,11 +230,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         YBox.Text = (step?.Y ?? 300).ToString(CultureInfo.InvariantCulture);
         WaitSecondsBox.Text = (step?.Seconds ?? 1).ToString(CultureInfo.InvariantCulture);
         RepeatCountBox.Text = (step?.RepeatCount ?? 3).ToString(CultureInfo.InvariantCulture);
+        RepeatDurationCheck.IsChecked = step?.RepeatByDuration ?? false;
+        RepeatDurationBox.Text = (step?.RepeatDurationSeconds ?? 10).ToString(CultureInfo.InvariantCulture);
+        RepeatCountSettings.Visibility = step?.RepeatByDuration == true ? Visibility.Collapsed : Visibility.Visible;
+        RepeatDurationSettings.Visibility = step?.RepeatByDuration == true ? Visibility.Visible : Visibility.Collapsed;
         MouseButtonBox.SelectedIndex = step?.MouseButton switch { "Right" => 1, "Middle" => 2, _ => 0 };
         _updatingProperties = false;
     }
 
     private void Property_Changed(object sender, TextChangedEventArgs e) => ApplyPropertyChanges();
+
+    private void RepeatDurationCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_updatingProperties) return;
+        if (SelectedStep is { Type: MacroStepType.Repeat } step)
+        {
+            step.RepeatByDuration = RepeatDurationCheck.IsChecked == true;
+            RepeatCountSettings.Visibility = step.RepeatByDuration ? Visibility.Collapsed : Visibility.Visible;
+            RepeatDurationSettings.Visibility = step.RepeatByDuration ? Visibility.Visible : Visibility.Collapsed;
+            step.RefreshComputedProperties();
+            StepsGrid.Items.Refresh();
+        }
+    }
+
     private void Property_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (!_updatingProperties) ApplyPropertyChanges();
@@ -264,6 +284,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         else if (step.Type == MacroStepType.Repeat)
         {
             if (int.TryParse(RepeatCountBox.Text, out var count)) step.RepeatCount = Math.Max(0, count);
+            step.RepeatByDuration = RepeatDurationCheck.IsChecked == true;
+            if (double.TryParse(RepeatDurationBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var duration))
+                step.RepeatDurationSeconds = Math.Clamp(duration, 0, 86400);
         }
         step.RefreshComputedProperties();
         // Property edits do not change the tree structure. Refreshing VisibleSteps here
@@ -316,7 +339,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private static MacroStep CloneForExecution(MacroStep s) => new()
     {
         Type = s.Type, Name = s.Name, Key = s.Key, MouseButton = s.MouseButton,
-        Seconds = s.Seconds, RepeatCount = s.RepeatCount, X = s.X, Y = s.Y,
+        Seconds = s.Seconds, RepeatCount = s.RepeatCount,
+        RepeatByDuration = s.RepeatByDuration, RepeatDurationSeconds = s.RepeatDurationSeconds,
+        X = s.X, Y = s.Y,
         Children = s.Children.Select(CloneForExecution).ToList()
     };
 
@@ -333,7 +358,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         var allSteps = AllSteps(Steps).ToList();
-        if (allSteps.Any(s => s.Type == MacroStepType.Repeat && s.RepeatCount == 0 && s.Children.Count > 0))
+        if (allSteps.Any(s => s.Type == MacroStepType.Repeat && !s.RepeatByDuration && s.RepeatCount == 0 && s.Children.Count > 0))
         {
             var result = MessageBox.Show(this, "回数が 0 の繰り返しは停止するまで無限に実行されます。続行しますか？", "無限ループの確認", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes) return;
