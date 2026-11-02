@@ -650,6 +650,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         RepeatByDuration = s.RepeatByDuration, RepeatDurationSeconds = s.RepeatDurationSeconds,
         X = s.X, Y = s.Y,
         RelativeX = s.RelativeX, RelativeY = s.RelativeY,
+        ScrollDelta = s.ScrollDelta,
+        RandomWaitMaxSeconds = s.RandomWaitMaxSeconds,
         Children = s.Children.Select(CloneForExecution).ToList()
     };
 
