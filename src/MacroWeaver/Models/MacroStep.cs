@@ -85,7 +85,9 @@ public sealed class MacroStep : INotifyPropertyChanged
         MacroStepType.MouseClick => $"{MouseButton} ボタン / {RepeatCount} 回",
         MacroStepType.MouseMove => $"X={X}, Y={Y}",
         MacroStepType.Wait => $"{Seconds:0.###} 秒待機",
-        MacroStepType.Repeat => $"{(RepeatCount == 0 ? "無限" : RepeatCount.ToString())} 回 / 内部操作 {Children.Count} 件",
+        MacroStepType.Repeat => RepeatByDuration
+            ? $"{RepeatDurationSeconds:0.###} 秒間 / 内部操作 {Children.Count} 件"
+            : $"{(RepeatCount == 0 ? "無限" : RepeatCount.ToString())} 回 / 内部操作 {Children.Count} 件",
         _ => string.Empty
     };
 
