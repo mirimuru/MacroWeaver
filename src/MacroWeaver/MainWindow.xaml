@@ -76,6 +76,9 @@
                     </StackPanel>
                     <DataGrid x:Name="StepsGrid" ItemsSource="{Binding VisibleSteps}" SelectedItem="{Binding SelectedStep, Mode=TwoWay}"
                               AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                              ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
+                              VirtualizingPanel.VirtualizationMode="Recycling"
                               SelectionMode="Single" SelectionUnit="FullRow" GridLinesVisibility="Horizontal"
                               HeadersVisibility="Column" Background="#FF292D37" Foreground="#FFF3F4F8"
                               BorderThickness="0" RowBackground="#FF292D37" AlternatingRowBackground="#FF252832"
