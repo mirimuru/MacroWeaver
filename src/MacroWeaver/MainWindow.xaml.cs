@@ -248,7 +248,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var repeatIndex = Steps.ToList().FindIndex(s => s.Type == MacroStepType.Repeat);
         if (repeatIndex >= 0 && repeatIndex == Steps.Count - 1)
         {
-            MessageBox.Show(this, "繰り返しの後に実行する操作がありません。繰り返しの前に操作を置き、繰り返し行をその直前に配置してください。", "手順を確認", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(this, "繰り返し行の後ろに、繰り返したい操作を1つ以上配置してください。繰り返し行はループ開始位置として動作します。", "手順を確認", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         if (Steps.Any(s => s.Type == MacroStepType.Repeat && s.RepeatCount == 0))
