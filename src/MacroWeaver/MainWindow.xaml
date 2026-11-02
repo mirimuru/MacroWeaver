@@ -73,6 +73,18 @@
                             <Style TargetType="DataGridRow">
                                 <Setter Property="Background" Value="#FF292D37" />
                                 <Setter Property="Foreground" Value="#FFF3F4F8" />
+                                <EventSetter Event="PreviewMouseRightButtonDown" Handler="StepsGridRow_PreviewMouseRightButtonDown" />
+                                <Setter Property="ContextMenu">
+                                    <Setter.Value>
+                                        <ContextMenu>
+                                            <MenuItem Header="↑ 上へ移動" Click="MoveUp_Click" />
+                                            <MenuItem Header="↓ 下へ移動" Click="MoveDown_Click" />
+                                            <Separator />
+                                            <MenuItem Header="⧉ 複製" Click="Duplicate_Click" />
+                                            <MenuItem Header="－ 削除" Click="Delete_Click" />
+                                        </ContextMenu>
+                                    </Setter.Value>
+                                </Setter>
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="Background" Value="#FF46516F" />
@@ -141,7 +153,7 @@
 
                         <StackPanel x:Name="RepeatPanel" Visibility="Collapsed">
                             <TextBlock Text="繰り返し方法" Foreground="{StaticResource MutedBrush}" />
-                            <CheckBox x:Name="RepeatDurationCheck" Content="時間指定で繰り返す" Margin="0,5,0,8" Checked="RepeatDurationCheck_Changed" Unchecked="RepeatDurationCheck_Changed" />
+                            <CheckBox x:Name="RepeatDurationCheck" Content="時間指定で繰り返す" Foreground="#FFFFFFFF" FontWeight="SemiBold" Background="Transparent" Margin="0,5,0,8" Checked="RepeatDurationCheck_Changed" Unchecked="RepeatDurationCheck_Changed" />
                             <StackPanel x:Name="RepeatCountSettings">
                                 <TextBlock Text="繰り返し回数（0 = 無限）" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
                                 <TextBox x:Name="RepeatCountBox" Margin="0,5,0,12" Padding="8" Text="3" TextChanged="Property_Changed" />
