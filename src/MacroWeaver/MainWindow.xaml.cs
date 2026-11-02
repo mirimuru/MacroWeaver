@@ -104,7 +104,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
 
         IList<MacroStep> destination;
-        if (SelectedStep?.Type == MacroStepType.Repeat)
+        if (AddAtRootCheck.IsChecked == true)
+        {
+            destination = Steps;
+            var rootIndex = SelectedStep is null ? -1 : Steps.IndexOf(SelectedStep);
+            if (rootIndex >= 0) destination.Insert(rootIndex + 1, step);
+            else destination.Add(step);
+        }
+        else if (SelectedStep?.Type == MacroStepType.Repeat)
         {
             destination = SelectedStep.Children;
             destination.Add(step);
