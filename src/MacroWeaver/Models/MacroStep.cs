@@ -17,8 +17,8 @@ public sealed class MacroStep : INotifyPropertyChanged
     private string _name = "新しい操作";
     private string _key = "A";
     private string _mouseButton = "Left";
-    private double _seconds = 1;
-    private int _repeatCount = 3;
+    private double _seconds = 0.1;
+    private int _repeatCount = 1;
     private int _x = 500;
     private int _y = 300;
 
