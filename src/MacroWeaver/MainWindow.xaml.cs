@@ -6,6 +6,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
+using System.Windows.Interop;
 using MacroWeaver.Models;
 using MacroWeaver.Services;
 
@@ -35,6 +36,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private MacroStep? _selectedStep;
     private bool _updatingProperties;
     private readonly MacroExecutionService _executionService = new();
+    private MacroInputRecorder? _inputRecorder;
     private bool _stopRequested;
     private bool _loadingMacro;
     private string? _currentMacroId;
@@ -70,6 +72,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         StepsGrid.SelectedIndex = 0;
         RefreshOrderLabels();
         Loaded += MainWindow_Loaded;
+        Closing += MainWindow_Closing;
     }
 
     private void Steps_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) => RefreshOrderLabels();
@@ -164,6 +167,59 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         StatusText.Text = SelectedStep is not null && !ReferenceEquals(FindContainingList(step), Steps)
             ? $"「{step.Name}」を追加しました。繰り返しの内部に追加するには、繰り返し行を選択してから操作を追加してください。"
             : $"「{step.Name}」を追加しました。";
+    }
+
+    private void StartRecording_Click(object sender, RoutedEventArgs e)
+    {
+        if (_executionService.IsRunning)
+        {
+            MessageBox.Show(this, "マクロ実行中は操作を記録できません。先にマクロを停止してください。", "実行中", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            _inputRecorder ??= new MacroInputRecorder(new WindowInteropHelper(this).Handle);
+            _inputRecorder.StepRecorded -= InputRecorder_StepRecorded;
+            _inputRecorder.StepRecorded += InputRecorder_StepRecorded;
+            _inputRecorder.Start();
+            StartRecordingButton.IsEnabled = false;
+            StopRecordingButton.IsEnabled = true;
+            StatusText.Text = "操作を記録中です。キーボード・マウスを操作し、「記録停止」を押してください。";
+        }
+        catch (Exception ex)
+        {
+            _inputRecorder?.Stop();
+            MessageBox.Show(this, $"操作記録を開始できませんでした。\\n{ex.Message}", "記録エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void StopRecording_Click(object sender, RoutedEventArgs e)
+    {
+        if (_inputRecorder is null || !_inputRecorder.IsRecording) return;
+        _inputRecorder.Stop();
+        StartRecordingButton.IsEnabled = true;
+        StopRecordingButton.IsEnabled = false;
+        RefreshOrderLabels();
+        StatusText.Text = "操作記録を停止しました。記録した操作は現在のマクロ末尾に追加されています。内容を確認して保存してください。";
+    }
+
+    private void InputRecorder_StepRecorded(MacroStep step)
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (_inputRecorder?.IsRecording != true) return;
+            Steps.Add(step);
+            RefreshOrderLabels();
+            StepsGrid.SelectedItem = step;
+            StepsGrid.ScrollIntoView(step);
+        });
+    }
+
+    private void MainWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        _inputRecorder?.Dispose();
+        _inputRecorder = null;
     }
 
     private void AddKey_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.KeyPress);
