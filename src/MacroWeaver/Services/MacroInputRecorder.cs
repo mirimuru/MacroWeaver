@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Threading;
 using MacroWeaver.Models;
 
 namespace MacroWeaver.Services;
@@ -33,6 +34,11 @@ public sealed class MacroInputRecorder : IDisposable
     private IntPtr _mouseHook;
     private long _lastRecordedTimestamp;
     private bool _disposed;
+    private Thread? _hookThread;
+    private uint _hookThreadId;
+    private readonly ManualResetEventSlim _hookReady = new(false);
+    private Exception? _hookStartError;
+    private volatile bool _stopRequested;
 
     public bool IsRecording { get; private set; }
     public event Action<MacroStep>? StepRecorded;
@@ -49,42 +55,70 @@ public sealed class MacroInputRecorder : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         if (IsRecording) return;
-
         _pressedKeys.Clear();
         _lastRecordedTimestamp = Stopwatch.GetTimestamp();
+        _hookReady.Reset();
+        _hookStartError = null;
+        _stopRequested = false;
+        _hookThread = new Thread(HookThreadMain) { IsBackground = true, Name = "MacroWeaver input hook" };
+        _hookThread.SetApartmentState(ApartmentState.STA);
+        _hookThread.Start();
+        if (!_hookReady.Wait(TimeSpan.FromSeconds(5)))
+        {
+            _stopRequested = true;
+            throw new TimeoutException("入力記録用スレッドの起動がタイムアウトしました。");
+        }
+        if (_hookStartError is not null)
+        {
+            _hookThread.Join(1000);
+            _hookThread = null;
+            throw new InvalidOperationException("入力フックを開始できませんでした。", _hookStartError);
+        }
+        IsRecording = true;
+    }
+
+    private void HookThreadMain()
+    {
+        _hookThreadId = GetCurrentThreadId();
         _keyboardHook = SetWindowsHookEx(WhKeyboardLl, _keyboardProc, GetModuleHandle(null), 0);
         if (_keyboardHook == IntPtr.Zero)
-            throw new InvalidOperationException($"キーボードフックを開始できませんでした（Win32 エラー {Marshal.GetLastWin32Error()}）。");
-
+        {
+            _hookStartError = new InvalidOperationException($"キーボードフックの登録に失敗しました（Win32 エラー {Marshal.GetLastWin32Error()}）。");
+            _hookReady.Set();
+            return;
+        }
         _mouseHook = SetWindowsHookEx(WhMouseLl, _mouseProc, GetModuleHandle(null), 0);
         if (_mouseHook == IntPtr.Zero)
         {
-            var error = Marshal.GetLastWin32Error();
+            _hookStartError = new InvalidOperationException($"マウスフックの登録に失敗しました（Win32 エラー {Marshal.GetLastWin32Error()}）。");
             UnhookWindowsHookEx(_keyboardHook);
             _keyboardHook = IntPtr.Zero;
-            throw new InvalidOperationException($"マウスフックを開始できませんでした（Win32 エラー {error}）。");
+            _hookReady.Set();
+            return;
         }
-
-        IsRecording = true;
+        _hookReady.Set();
+        while (!_stopRequested && GetMessage(out var message, IntPtr.Zero, 0, 0) > 0)
+        {
+            TranslateMessage(ref message);
+            DispatchMessage(ref message);
+        }
+        if (_keyboardHook != IntPtr.Zero) { UnhookWindowsHookEx(_keyboardHook); _keyboardHook = IntPtr.Zero; }
+        if (_mouseHook != IntPtr.Zero) { UnhookWindowsHookEx(_mouseHook); _mouseHook = IntPtr.Zero; }
+        _hookThreadId = 0;
     }
 
     public void Stop()
     {
-        if (!IsRecording && _keyboardHook == IntPtr.Zero && _mouseHook == IntPtr.Zero) return;
         IsRecording = false;
-        if (_keyboardHook != IntPtr.Zero)
+        _stopRequested = true;
+        if (_hookThreadId != 0) PostThreadMessage(_hookThreadId, 0x0012, IntPtr.Zero, IntPtr.Zero);
+        if (_hookThread is not null && Thread.CurrentThread != _hookThread)
         {
-            UnhookWindowsHookEx(_keyboardHook);
-            _keyboardHook = IntPtr.Zero;
-        }
-        if (_mouseHook != IntPtr.Zero)
-        {
-            UnhookWindowsHookEx(_mouseHook);
-            _mouseHook = IntPtr.Zero;
+            _hookThread.Join(2000);
+            _hookThread = null;
         }
         _pressedKeys.Clear();
     }
-
     private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
         if (nCode >= 0 && IsRecording)
@@ -260,6 +294,32 @@ public sealed class MacroInputRecorder : IDisposable
 
     [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
     private static extern IntPtr GetModuleHandle(string? moduleName);
+
+    [DllImport("kernel32.dll")]
+    private static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool PostThreadMessage(uint threadId, uint message, IntPtr wParam, IntPtr lParam);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeMessage
+    {
+        public IntPtr HWnd;
+        public uint Message;
+        public UIntPtr WParam;
+        public IntPtr LParam;
+        public uint Time;
+        public Point Point;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int GetMessage(out NativeMessage message, IntPtr hWnd, uint min, uint max);
+
+    [DllImport("user32.dll")]
+    private static extern bool TranslateMessage(ref NativeMessage message);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr DispatchMessage(ref NativeMessage message);
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
