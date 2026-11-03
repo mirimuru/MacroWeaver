@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
@@ -40,6 +41,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private MacroInputRecorder? _inputRecorder;
     private bool _stopRequested;
     private bool _loadingMacro;
+    private bool _allowClose;
+    private bool _isHandlingClose;
+    private string? _savedMacroSnapshot;
     private HwndSource? _hotkeySource;
     private const int StopHotkeyId = 0x4D57;
     private const uint ModAlt = 0x0001;
@@ -223,11 +227,57 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }));
     }
 
-    private void MainWindow_Closing(object? sender, CancelEventArgs e)
+    private async void MainWindow_Closing(object? sender, CancelEventArgs e)
     {
-        UnregisterStopHotkey();
-        _inputRecorder?.Dispose();
-        _inputRecorder = null;
+        if (_allowClose)
+        {
+            UnregisterStopHotkey();
+            _inputRecorder?.Dispose();
+            _inputRecorder = null;
+            return;
+        }
+
+        // Closing is asynchronous because saving the current macro uses async file I/O.
+        e.Cancel = true;
+        if (_isHandlingClose) return;
+        _isHandlingClose = true;
+
+        try
+        {
+            if (HasUnsavedChanges())
+            {
+                var result = MessageBox.Show(
+                    this,
+                    $"マクロ「{MacroLibrary.FirstOrDefault(m => m.Id == _currentMacroId)?.Name ?? "現在のマクロ"}」に保存していない変更があります。\\n保存してから終了しますか？",
+                    "未保存の変更",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.Cancel)
+                    return;
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        await SaveCurrentMacroAsync();
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(this, $"マクロの保存に失敗しました。\\n{ex.Message}\\n終了せずに編集画面に戻ります。",
+                            "保存エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+                }
+            }
+
+            _allowClose = true;
+            Close();
+        }
+        finally
+        {
+            _isHandlingClose = false;
+        }
     }
 
     private void AddKey_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.KeyPress);
@@ -569,6 +619,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 _currentMacroId = first.Id;
                 var document = await MacroDocumentService.LoadAsync(GetMacroPath(first.Id));
                 ReplaceCurrentSteps(document.Steps);
+                UpdateSavedMacroSnapshot();
                 StatusText.Text = $"「{first.Name}」を読み込みました。";
             }
         }
@@ -593,6 +644,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         StepsGrid.SelectedItem = SelectedStep;
     }
 
+    private string? CreateCurrentMacroSnapshot()
+    {
+        var item = MacroLibrary.FirstOrDefault(m => m.Id == _currentMacroId);
+        if (item is null) return null;
+        var document = new MacroDocument { Name = item.Name, Steps = Steps.ToList() };
+        return JsonSerializer.Serialize(document);
+    }
+
+    private void UpdateSavedMacroSnapshot() => _savedMacroSnapshot = CreateCurrentMacroSnapshot();
+
+    private bool HasUnsavedChanges()
+        => _currentMacroId is not null &&
+           !string.Equals(CreateCurrentMacroSnapshot(), _savedMacroSnapshot, StringComparison.Ordinal);
+
     private async Task SaveCurrentMacroAsync()
     {
         Directory.CreateDirectory(_macroLibraryDirectory);
@@ -606,6 +671,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         var document = new MacroDocument { Name = item.Name, Steps = Steps.ToList() };
         await MacroDocumentService.SaveAsync(GetMacroPath(item.Id), document);
+        UpdateSavedMacroSnapshot();
     }
 
     private async void Save_Click(object sender, RoutedEventArgs e)
@@ -642,6 +708,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             _loadingMacro = true;
             _currentMacroId = selected.Id;
             ReplaceCurrentSteps(document.Steps);
+            UpdateSavedMacroSnapshot();
             _loadingMacro = false;
             StatusText.Text = $"「{selected.Name}」に切り替えました。";
         }
