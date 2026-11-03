@@ -4,6 +4,16 @@
         Title="MacroWeaver" Height="760" Width="1240" MinHeight="620" MinWidth="980"
         WindowStartupLocation="CenterScreen" Background="#FF17191F" Foreground="#FFF3F4F8" PreviewKeyDown="MainWindow_PreviewKeyDown">
     <Window.Resources>
+        <ContextMenu x:Key="RepeatChildMenu">
+            <MenuItem Header="⌨ キー入力" Tag="KeyPress" Click="RepeatChildMenuItem_Click" />
+            <MenuItem Header="🖱 マウスクリック" Tag="MouseClick" Click="RepeatChildMenuItem_Click" />
+            <MenuItem Header="↗ マウス移動（座標）" Tag="MouseMove" Click="RepeatChildMenuItem_Click" />
+            <MenuItem Header="↔ マウス相対移動" Tag="MouseMoveRelative" Click="RepeatChildMenuItem_Click" />
+            <MenuItem Header="↕ マウスホイール" Tag="MouseScroll" Click="RepeatChildMenuItem_Click" />
+            <MenuItem Header="⏱ 待機" Tag="Wait" Click="RepeatChildMenuItem_Click" />
+            <MenuItem Header="🎲 ランダム待機" Tag="RandomWait" Click="RepeatChildMenuItem_Click" />
+            <MenuItem Header="🔁 繰り返し" Tag="Repeat" Click="RepeatChildMenuItem_Click" />
+        </ContextMenu>
         <ContextMenu x:Key="StepContextMenu">
             <MenuItem Header="↑ 上へ移動" Click="MoveUp_Click" />
             <MenuItem Header="↓ 下へ移動" Click="MoveDown_Click" />
@@ -95,7 +105,7 @@
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,4,4,12">
                         <TextBlock Text="ブロックエリア" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
                         <TextBlock x:Name="StepCountText" Text="0 操作" Foreground="{StaticResource MutedBrush}" Margin="12,2,0,0" VerticalAlignment="Center" />
-                        <TextBlock Text="繰り返し左の −／＋ で内部を折りたたみ・展開できます" Foreground="#FF9CA8C2" FontSize="11" Margin="14,3,0,0" VerticalAlignment="Center" />
+                        <TextBlock Text="繰り返し左の −／＋ で展開・折りたたみ、＋ で内部に操作を追加できます" Foreground="#FF9CA8C2" FontSize="11" Margin="14,3,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                     <DataGrid Grid.Row="1" x:Name="StepsGrid" AllowDrop="True" PreviewMouseMove="StepsGrid_PreviewMouseMove" PreviewMouseLeftButtonUp="StepsGrid_PreviewMouseLeftButtonUp" DragOver="StepsGrid_DragOver" Drop="StepsGrid_Drop" ItemsSource="{Binding VisibleSteps}" SelectedItem="{Binding SelectedStep, Mode=TwoWay}"
                               AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
@@ -226,11 +236,16 @@
                             </Style>
                         </DataGrid.Resources>
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="" Width="34">
+                            <DataGridTemplateColumn Header="" Width="68">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="{Binding ExpandGlyph}" IsEnabled="{Binding IsRepeat}" Click="ToggleRepeat_Click"
-                                                Padding="2,0" MinWidth="24" MinHeight="24" ToolTip="繰り返しの内部を展開／折りたたみ" />
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <Button Content="{Binding ExpandGlyph}" IsEnabled="{Binding IsRepeat}" Click="ToggleRepeat_Click"
+                                                    Padding="2,0" MinWidth="24" MinHeight="24" ToolTip="繰り返しの内部を展開／折りたたみ" />
+                                            <Button Content="＋" IsEnabled="{Binding IsRepeat}" ContextMenu="{StaticResource RepeatChildMenu}"
+                                                    Click="AddRepeatChild_Click" Padding="2,0" MinWidth="24" MinHeight="24"
+                                                    ToolTip="この繰り返しの内部に操作を追加" />
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
