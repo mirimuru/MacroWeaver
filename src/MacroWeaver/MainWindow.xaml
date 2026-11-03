@@ -55,18 +55,21 @@
                         <RowDefinition Height="*" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <TextBlock Grid.Row="0" Text="操作を追加" FontSize="16" FontWeight="SemiBold" Margin="4,4,4,12" />
+                    <StackPanel Grid.Row="0" Margin="4,4,4,12">
+                        <TextBlock Text="ブロック一覧" FontSize="16" FontWeight="SemiBold" />
+                        <TextBlock Text="ブロックをドラッグして右側へ配置" FontSize="11" Foreground="{StaticResource MutedBrush}" Margin="0,4,0,0" />
+                    </StackPanel>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled"
                                   CanContentScroll="False" PanningMode="VerticalOnly">
                         <StackPanel>
-                            <Button Content="⌨  キー入力" Click="AddKey_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="🖱  マウスクリック" Click="AddClick_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="↗  マウス移動（座標）" Click="AddMove_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="↔  マウス相対移動（視点操作）" Click="AddRelativeMove_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="↕  マウスホイール" Click="AddScroll_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="⏱  待機" Click="AddWait_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="🎲  ランダム待機" Click="AddRandomWait_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="🔁  繰り返し" Click="AddRepeat_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="⌨  キー入力" Tag="KeyPress" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddKey_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="🖱  マウスクリック" Tag="MouseClick" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddClick_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="↗  マウス移動（座標）" Tag="MouseMove" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddMove_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="↔  マウス相対移動（視点操作）" Tag="MouseMoveRelative" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddRelativeMove_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="↕  マウスホイール" Tag="MouseScroll" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddScroll_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="⏱  待機" Tag="Wait" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddWait_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="🎲  ランダム待機" Tag="RandomWait" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddRandomWait_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="🔁  繰り返し" Tag="Repeat" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddRepeat_Click" HorizontalContentAlignment="Left" />
                             <CheckBox x:Name="AddAtRootCheck" Content="最上位に追加（繰り返しの外）" Foreground="#FFF3F4F8" Margin="4,4,4,10" ToolTip="チェックすると、選択中の繰り返しの内部ではなく、最上位の手順に追加します。" />
                             <Separator Margin="3,12" />
                             <Button Content="↑  上へ移動" Click="MoveUp_Click" HorizontalContentAlignment="Left" />
@@ -90,16 +93,16 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,4,4,12">
-                        <TextBlock Text="マクロの手順" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Text="ブロックエリア" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
                         <TextBlock x:Name="StepCountText" Text="0 操作" Foreground="{StaticResource MutedBrush}" Margin="12,2,0,0" VerticalAlignment="Center" />
-                        <TextBlock Text="  │  ├─ / └─ は繰り返しの内部階層" Foreground="#FF9CA8C2" FontSize="11" Margin="14,3,0,0" VerticalAlignment="Center" />
+                        <TextBlock Text="ブロックをドラッグして順番変更／繰り返しの中央へドロップすると内部に入ります" Foreground="#FF9CA8C2" FontSize="11" Margin="14,3,0,0" VerticalAlignment="Center" />
                     </StackPanel>
-                    <DataGrid Grid.Row="1" x:Name="StepsGrid" ItemsSource="{Binding VisibleSteps}" SelectedItem="{Binding SelectedStep, Mode=TwoWay}"
+                    <DataGrid Grid.Row="1" x:Name="StepsGrid" AllowDrop="True" PreviewMouseMove="StepsGrid_PreviewMouseMove" PreviewMouseLeftButtonUp="StepsGrid_PreviewMouseLeftButtonUp" DragOver="StepsGrid_DragOver" Drop="StepsGrid_Drop" ItemsSource="{Binding VisibleSteps}" SelectedItem="{Binding SelectedStep, Mode=TwoWay}"
                               AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                               ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto"
                               ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.VirtualizationMode="Recycling"
-                              SelectionMode="Extended" SelectionUnit="FullRow" GridLinesVisibility="Horizontal"
+                              SelectionMode="Extended" SelectionUnit="FullRow" GridLinesVisibility="None"
                               HeadersVisibility="Column" Background="#FF292D37" Foreground="#FFF3F4F8"
                               BorderThickness="0" RowBackground="#FF292D37" AlternatingRowBackground="#FF252832"
                               HorizontalGridLinesBrush="#FF3A3E49" VerticalGridLinesBrush="#FF3A3E49"
@@ -112,7 +115,10 @@
                                 <Setter Property="BorderThickness" Value="0" />
                             </Style>
                             <Style TargetType="DataGridRow">
-                                <Setter Property="MinHeight" Value="46" />
+                                <Setter Property="MinHeight" Value="58" />
+                                <Setter Property="Margin" Value="0,3,0,3" />
+                                <Setter Property="BorderThickness" Value="1" />
+                                <Setter Property="BorderBrush" Value="#FF41495D" />
                                 <Setter Property="Background" Value="#FF292D37" />
                                 <Setter Property="Foreground" Value="#FFF3F4F8" />
                                 <Setter Property="FontWeight" Value="Normal" />
