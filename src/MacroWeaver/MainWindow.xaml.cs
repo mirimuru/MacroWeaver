@@ -975,6 +975,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
         if (System.Windows.Input.Keyboard.Modifiers != System.Windows.Input.ModifierKeys.Control) return;
+        // Preserve the normal text-editing shortcuts while a text field is focused.
+        if (System.Windows.Input.Keyboard.FocusedElement is System.Windows.Controls.Primitives.TextBoxBase) return;
         switch (e.Key)
         {
             case System.Windows.Input.Key.C:
