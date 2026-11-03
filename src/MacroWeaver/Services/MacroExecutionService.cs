@@ -40,36 +40,12 @@ public sealed class MacroExecutionService
         IsPaused = false;
         _pauseGate.Set();
 
-        int[]? originalMouseSettings = null;
-        var normalizedMouseSettingsApplied = false;
-
         try
         {
-            // Windows pointer acceleration makes identical relative SendInput deltas
-            // travel different screen distances depending on movement speed.
-            // Temporarily use 1:1 pointer scaling with acceleration disabled.
-            if (ContainsRelativeMove(steps))
-            {
-                originalMouseSettings = new int[3];
-                if (!SystemParametersInfo(SpiGetMouse, 0, originalMouseSettings, 0))
-                    throw new InvalidOperationException("Windowsのマウス設定を取得できませんでした。");
-
-                if (!SystemParametersInfo(SpiSetMouse, 0, [0, 0, 10], 0))
-                    throw new InvalidOperationException("マウス加速を一時的に無効化できませんでした。");
-
-                normalizedMouseSettingsApplied = true;
-            }
-
             await ExecuteStepsAsync(steps, progress, _runCts.Token, 0);
         }
         finally
         {
-            if (normalizedMouseSettingsApplied && originalMouseSettings is not null)
-            {
-                // Restore the user's exact settings even when execution is stopped or fails.
-                SystemParametersInfo(SpiSetMouse, 0, originalMouseSettings, 0);
-            }
-
             IsRunning = false;
             IsPaused = false;
             _pauseGate.Set();
@@ -139,7 +115,7 @@ public sealed class MacroExecutionService
                         throw new InvalidOperationException($"マウスを座標 ({step.X}, {step.Y}) に移動できませんでした。");
                     break;
                 case MacroStepType.MouseMoveRelative:
-                    MoveMouseRelative(step.RelativeX, step.RelativeY);
+                    await MoveMouseRelativeAsync(step.RelativeX, step.RelativeY, token);
                     break;
                 case MacroStepType.MouseClick:
                     for (var click = 0; click < Math.Clamp(step.RepeatCount, 1, 10000); click++)
@@ -217,36 +193,54 @@ public sealed class MacroExecutionService
         SendInput(1, [input], Marshal.SizeOf<INPUT>());
     }
 
-    private const uint SpiGetMouse = 0x0003;
-    private const uint SpiSetMouse = 0x0004;
-
-    private static bool ContainsRelativeMove(IEnumerable<MacroStep> steps)
-        => steps.Any(step => step.Type == MacroStepType.MouseMoveRelative ||
-                             ContainsRelativeMove(step.Children));
-
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SystemParametersInfo(
-        uint uiAction, uint uiParam, int[] pvParam, uint fWinIni);
-
-    private static void MoveMouseRelative(int deltaX, int deltaY)
+    private static async Task MoveMouseRelativeAsync(int deltaX, int deltaY, CancellationToken token)
     {
-        var input = new INPUT
-        {
-            type = 0,
-            U = new InputUnion
-            {
-                mi = new MOUSEINPUT
-                {
-                    dx = deltaX,
-                    dy = deltaY,
-                    dwFlags = (uint)MouseEventFlags.Move
-                }
-            }
-        };
+        // Send large relative deltas as paced smaller inputs. This gives games such as
+        // Minecraft opportunities to consume mouse motion between render/input frames,
+        // instead of delivering the entire movement in one burst.
+        const int maxChunk = 10;
+        const int intervalMs = 2;
+        var chunkCount = Math.Max(1, (int)Math.Ceiling(
+            Math.Max(Math.Abs((long)deltaX), Math.Abs((long)deltaY)) / (double)maxChunk));
 
-        if (SendInput(1, [input], Marshal.SizeOf<INPUT>()) != 1)
-            throw new InvalidOperationException("マウスの相対移動を送信できませんでした。");
+        var sentX = 0;
+        var sentY = 0;
+
+        for (var i = 1; i <= chunkCount; i++)
+        {
+            token.ThrowIfCancellationRequested();
+            await WaitIfPausedAsync(token);
+
+            var targetX = (int)Math.Round(deltaX * (i / (double)chunkCount), MidpointRounding.AwayFromZero);
+            var targetY = (int)Math.Round(deltaY * (i / (double)chunkCount), MidpointRounding.AwayFromZero);
+            var partX = targetX - sentX;
+            var partY = targetY - sentY;
+            sentX = targetX;
+            sentY = targetY;
+
+            if (partX != 0 || partY != 0)
+            {
+                var input = new INPUT
+                {
+                    type = 0,
+                    U = new InputUnion
+                    {
+                        mi = new MOUSEINPUT
+                        {
+                            dx = partX,
+                            dy = partY,
+                            dwFlags = (uint)MouseEventFlags.Move
+                        }
+                    }
+                };
+
+                if (SendInput(1, [input], Marshal.SizeOf<INPUT>()) != 1)
+                    throw new InvalidOperationException("マウスの相対移動を送信できませんでした。");
+            }
+
+            if (i < chunkCount)
+                await Task.Delay(intervalMs, token);
+        }
     }
 
     private static void SendMouseWheel(int delta)
