@@ -252,6 +252,99 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         StatusText.Text = "選択した操作を削除しました。";
     }
 
+    private static IEnumerable<MacroStep> DescendantsAndSelf(MacroStep step)
+        => new[] { step }.Concat(step.Children.SelectMany(DescendantsAndSelf));
+
+    private void MoveIntoRepeat_Click(object sender, RoutedEventArgs e)
+    {
+        var movingStep = SelectedStep;
+        if (movingStep is null) return;
+
+        // A step cannot be moved into itself or one of its descendants.
+        var forbidden = DescendantsAndSelf(movingStep).ToHashSet();
+        var repeatTargets = AllSteps(Steps)
+            .Where(step => step.Type == MacroStepType.Repeat && !forbidden.Contains(step))
+            .ToList();
+
+        if (repeatTargets.Count == 0)
+        {
+            MessageBox.Show(this,
+                "移動先にできる繰り返し操作がありません。先に「繰り返し」を追加してください。",
+                "移動先がありません", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var selector = new ComboBox
+        {
+            MinWidth = 360,
+            MaxDropDownHeight = 300,
+            Margin = new Thickness(0, 10, 0, 14),
+            Padding = new Thickness(6),
+            ItemsSource = repeatTargets,
+            DisplayMemberPath = nameof(MacroStep.Name)
+        };
+        selector.SelectionChanged += (_, _) =>
+        {
+            if (selector.SelectedItem is MacroStep selected)
+                selector.ToolTip = $"{selected.OrderLabel}：{selected.Name}";
+        };
+        selector.SelectedIndex = 0;
+
+        var confirm = new Button
+        {
+            Content = "移動",
+            Width = 84,
+            IsDefault = true,
+            Margin = new Thickness(0, 0, 8, 0),
+            IsEnabled = true
+        };
+        var cancel = new Button { Content = "キャンセル", Width = 92, IsCancel = true };
+        var buttons = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Right,
+            Children = { confirm, cancel }
+        };
+        var panel = new StackPanel { Margin = new Thickness(16) };
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"「{movingStep.Name}」を入れる繰り返し操作を選択してください。"
+        });
+        panel.Children.Add(selector);
+        panel.Children.Add(buttons);
+
+        var dialog = new Window
+        {
+            Title = "繰り返しに移動",
+            Content = panel,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            ResizeMode = ResizeMode.NoResize,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = this,
+            Background = (System.Windows.Media.Brush)new System.Windows.Media.BrushConverter().ConvertFromString("#FF20232B")!,
+            Foreground = System.Windows.Media.Brushes.White
+        };
+        confirm.Click += (_, _) => dialog.DialogResult = true;
+
+        if (dialog.ShowDialog() != true || selector.SelectedItem is not MacroStep target)
+            return;
+
+        // Re-check the target before changing the tree, then move the original
+        // object rather than cloning it so its settings and nested children survive.
+        if (forbidden.Contains(target) || target.Type != MacroStepType.Repeat)
+            return;
+
+        var source = FindContainingList(movingStep);
+        if (!source.Remove(movingStep)) return;
+        target.Children.Add(movingStep);
+
+        RefreshOrderLabels();
+        SelectedStep = movingStep;
+        StepsGrid.SelectedItem = movingStep;
+        StepsGrid.ScrollIntoView(movingStep);
+        StatusText.Text = $"「{movingStep.Name}」を「{target.Name}」の繰り返し内部に移動しました。";
+    }
+
     private static MacroStep CloneStep(MacroStep original) => new()
     {
         Type = original.Type,
