@@ -92,6 +92,7 @@
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,4,4,12">
                         <TextBlock Text="マクロの手順" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
                         <TextBlock x:Name="StepCountText" Text="0 操作" Foreground="{StaticResource MutedBrush}" Margin="12,2,0,0" VerticalAlignment="Center" />
+                        <TextBlock Text="  │  ├─ / └─ は繰り返しの内部階層" Foreground="#FF9CA8C2" FontSize="11" Margin="14,3,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                     <DataGrid Grid.Row="1" x:Name="StepsGrid" ItemsSource="{Binding VisibleSteps}" SelectedItem="{Binding SelectedStep, Mode=TwoWay}"
                               AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
@@ -114,6 +115,7 @@
                                 <Setter Property="MinHeight" Value="46" />
                                 <Setter Property="Background" Value="#FF292D37" />
                                 <Setter Property="Foreground" Value="#FFF3F4F8" />
+                                <Setter Property="FontWeight" Value="Normal" />
                                 <EventSetter Event="PreviewMouseRightButtonDown" Handler="StepsGridRow_PreviewMouseRightButtonDown" />
                                 <EventSetter Event="PreviewMouseLeftButtonDown" Handler="StepsGridRow_PreviewMouseLeftButtonDown" />
                                 <Setter Property="ContextMenu" Value="{StaticResource StepContextMenu}" />
@@ -122,6 +124,10 @@
                                         <Setter Property="Background" Value="#FF46516F" />
                                         <Setter Property="Foreground" Value="#FFFFFFFF" />
                                     </Trigger>
+                                    <DataTrigger Binding="{Binding TypeLabel}" Value="🔁 繰り返し">
+                                        <Setter Property="Background" Value="#FF343D52" />
+                                        <Setter Property="FontWeight" Value="Bold" />
+                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                             <Style TargetType="DataGridCell">
