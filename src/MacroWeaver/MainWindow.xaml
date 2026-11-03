@@ -229,7 +229,10 @@
                     <Button Content="Ⅱ 一時停止" Click="Pause_Click" />
                     <Button Content="■ 停止" Click="Stop_Click" />
                 </StackPanel>
-                <TextBlock x:Name="StatusText" Text="準備完了：操作を追加してマクロを組み立ててください。" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusText" Text="準備完了：操作を追加してマクロを組み立ててください。" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+                    <TextBlock Text="　｜　停止ホットキー：Ctrl + Alt + S" VerticalAlignment="Center" Foreground="{StaticResource MutedBrush}" />
+                </StackPanel>
             </DockPanel>
         </Border>
     </Grid>
