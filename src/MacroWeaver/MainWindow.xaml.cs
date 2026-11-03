@@ -113,10 +113,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     // Flatten the tree for the grid while retaining visible branch guides.
     // Continuing vertical lines show that later siblings still belong to an
     // ancestor repeat; ├─ and └─ distinguish intermediate and final children.
-    private void AddVisibleStep(MacroStep step, string label, string ancestorGuides, bool isLast, bool insideRepeat = false)
+    private void AddVisibleStep(MacroStep step, string label, string ancestorGuides, bool isLast, int repeatDepth = 0)
     {
         step.IsRepeatEnd = false;
-        step.IsInsideRepeat = insideRepeat;
+        step.IsInsideRepeat = repeatDepth > 0;
+        step.RepeatDepth = repeatDepth;
         step.OrderLabel = ancestorGuides.Length == 0
             ? label
             : $"{ancestorGuides}{(isLast ? "└─ " : "├─ ")}{label}";
@@ -128,7 +129,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             for (var i = 0; i < step.Children.Count; i++)
             {
                 var child = step.Children[i];
-                AddVisibleStep(child, $"{label}.{i + 1}", childGuides, i == step.Children.Count - 1, true);
+                AddVisibleStep(child, $"{label}.{i + 1}", childGuides, i == step.Children.Count - 1, repeatDepth + 1);
                 if (i == step.Children.Count - 1)
                 {
                     MarkRepeatEnd(child);
