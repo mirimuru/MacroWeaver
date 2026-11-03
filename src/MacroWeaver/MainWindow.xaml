@@ -95,7 +95,7 @@
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="4,4,4,12">
                         <TextBlock Text="ブロックエリア" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
                         <TextBlock x:Name="StepCountText" Text="0 操作" Foreground="{StaticResource MutedBrush}" Margin="12,2,0,0" VerticalAlignment="Center" />
-                        <TextBlock Text="ブロックをドラッグして順番変更／繰り返しの中央へドロップすると内部に入ります" Foreground="#FF9CA8C2" FontSize="11" Margin="14,3,0,0" VerticalAlignment="Center" />
+                        <TextBlock Text="繰り返し左の −／＋ で内部を折りたたみ・展開できます" Foreground="#FF9CA8C2" FontSize="11" Margin="14,3,0,0" VerticalAlignment="Center" />
                     </StackPanel>
                     <DataGrid Grid.Row="1" x:Name="StepsGrid" AllowDrop="True" PreviewMouseMove="StepsGrid_PreviewMouseMove" PreviewMouseLeftButtonUp="StepsGrid_PreviewMouseLeftButtonUp" DragOver="StepsGrid_DragOver" Drop="StepsGrid_Drop" ItemsSource="{Binding VisibleSteps}" SelectedItem="{Binding SelectedStep, Mode=TwoWay}"
                               AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
@@ -219,6 +219,14 @@
                             </Style>
                         </DataGrid.Resources>
                         <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="" Width="34">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="{Binding ExpandGlyph}" IsEnabled="{Binding IsRepeat}" Click="ToggleRepeat_Click"
+                                                Padding="2,0" MinWidth="24" MinHeight="24" ToolTip="繰り返しの内部を展開／折りたたみ" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="#" Binding="{Binding OrderLabel}" Width="44" IsReadOnly="True" />
                             <DataGridTextColumn Header="操作" Binding="{Binding TypeLabel}" Width="150" IsReadOnly="True" />
                             <DataGridTextColumn Header="名前" Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Width="*" />
