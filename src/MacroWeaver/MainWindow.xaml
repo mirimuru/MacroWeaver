@@ -114,6 +114,7 @@
                                 <Setter Property="Background" Value="#FF292D37" />
                                 <Setter Property="Foreground" Value="#FFF3F4F8" />
                                 <EventSetter Event="PreviewMouseRightButtonDown" Handler="StepsGridRow_PreviewMouseRightButtonDown" />
+                                <EventSetter Event="PreviewMouseLeftButtonDown" Handler="StepsGridRow_PreviewMouseLeftButtonDown" />
                                 <Setter Property="ContextMenu" Value="{StaticResource StepContextMenu}" />
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
