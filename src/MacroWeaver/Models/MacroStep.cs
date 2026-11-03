@@ -35,6 +35,7 @@ public sealed class MacroStep : INotifyPropertyChanged
     public MacroStepType Type { get; set; }
     public string OrderLabel { get; set; } = "1";
     public bool IsRepeatEnd { get; set; }
+    public bool IsInsideRepeat { get; set; }
     public List<MacroStep> Children { get; set; } = [];
 
     public string Name
