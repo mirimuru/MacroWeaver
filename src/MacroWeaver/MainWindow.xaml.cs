@@ -201,7 +201,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (Exception ex)
         {
             _inputRecorder?.Stop();
-            MessageBox.Show(this, $"操作記録を開始できませんでした。\\n{ex.Message}", "記録エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, $"操作記録を開始できませんでした。\n{ex.Message}", "記録エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -250,7 +250,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 var result = MessageBox.Show(
                     this,
-                    $"マクロ「{MacroLibrary.FirstOrDefault(m => m.Id == _currentMacroId)?.Name ?? "現在のマクロ"}」に保存していない変更があります。\\n保存してから終了しますか？",
+                    $"マクロ「{MacroLibrary.FirstOrDefault(m => m.Id == _currentMacroId)?.Name ?? "現在のマクロ"}」に保存していない変更があります。\n保存してから終了しますか？",
                     "未保存の変更",
                     MessageBoxButton.YesNoCancel,
                     MessageBoxImage.Warning);
@@ -266,7 +266,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(this, $"マクロの保存に失敗しました。\\n{ex.Message}\\n終了せずに編集画面に戻ります。",
+                        MessageBox.Show(this, $"マクロの保存に失敗しました。\n{ex.Message}\n終了せずに編集画面に戻ります。",
                             "保存エラー", MessageBoxButton.OK, MessageBoxImage.Error);
                         return;
                     }
@@ -617,7 +617,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"マクロ一覧の読み込みに失敗しました。\\n{ex.Message}", "読み込みエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, $"マクロ一覧の読み込みに失敗しました。\n{ex.Message}", "読み込みエラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
         finally
         {
@@ -675,7 +675,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"保存に失敗しました。\\n{ex.Message}", "保存エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, $"保存に失敗しました。\n{ex.Message}", "保存エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -707,7 +707,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (Exception ex)
         {
             _loadingMacro = false;
-            MessageBox.Show(this, $"マクロの切り替えに失敗しました。\\n{ex.Message}", "切り替えエラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, $"マクロの切り替えに失敗しました。\n{ex.Message}", "切り替えエラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -778,7 +778,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show(this, $"マクロ名の保存に失敗しました。\\n{ex.Message}", "名前変更エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, $"マクロ名の保存に失敗しました。\n{ex.Message}", "名前変更エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -808,7 +808,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (Exception ex)
         {
             _loadingMacro = false;
-            MessageBox.Show(this, $"新規作成に失敗しました。\\n{ex.Message}", "作成エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, $"新規作成に失敗しました。\n{ex.Message}", "作成エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -856,7 +856,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         catch (Exception ex)
         {
             _loadingMacro = false;
-            MessageBox.Show(this, $"削除に失敗しました。\\n{ex.Message}", "削除エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(this, $"削除に失敗しました。\n{ex.Message}", "削除エラー", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
