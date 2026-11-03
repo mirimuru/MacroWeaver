@@ -204,6 +204,13 @@
                                         <Setter Property="BorderThickness" Value="4,0,0,4" />
                                         <Setter Property="FontWeight" Value="SemiBold" />
                                     </DataTrigger>
+                                    <MultiDataTrigger>
+                                        <MultiDataTrigger.Conditions>
+                                            <Condition Binding="{Binding IsRepeatEnd}" Value="True" />
+                                            <Condition Binding="{Binding TypeLabel}" Value="🔁 繰り返し" />
+                                        </MultiDataTrigger.Conditions>
+                                        <Setter Property="BorderThickness" Value="4,4,0,4" />
+                                    </MultiDataTrigger>
                                 </Style.Triggers>
                             </Style>
                             <Style TargetType="DataGridCell">
