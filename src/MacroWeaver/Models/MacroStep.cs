@@ -37,6 +37,9 @@ public sealed class MacroStep : INotifyPropertyChanged
     public bool IsRepeatEnd { get; set; }
     public bool IsInsideRepeat { get; set; }
     public int RepeatDepth { get; set; }
+    public bool IsExpanded { get; set; } = true;
+    public bool IsRepeat => Type == MacroStepType.Repeat;
+    public string ExpandGlyph => IsExpanded ? "−" : "+";
     public List<MacroStep> Children { get; set; } = [];
 
     public string Name
@@ -151,6 +154,8 @@ public sealed class MacroStep : INotifyPropertyChanged
     {
         OnPropertyChanged(nameof(TypeLabel));
         OnPropertyChanged(nameof(Summary));
+        OnPropertyChanged(nameof(IsRepeat));
+        OnPropertyChanged(nameof(ExpandGlyph));
     }
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
