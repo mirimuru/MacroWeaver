@@ -123,7 +123,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             : $"{ancestorGuides}{(isLast ? "└─ " : "├─ ")}{label}";
         VisibleSteps.Add(step);
 
-        if (step.Type == MacroStepType.Repeat)
+        if (step.Type == MacroStepType.Repeat && step.IsExpanded)
         {
             var childGuides = ancestorGuides + (ancestorGuides.Length == 0 ? "   " : (isLast ? "   " : "│  "));
             for (var i = 0; i < step.Children.Count; i++)
@@ -138,6 +138,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
 
         step.RefreshComputedProperties();
+    }
+
+    private void ToggleRepeat_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.DataContext is not MacroStep step || step.Type != MacroStepType.Repeat) return;
+        step.IsExpanded = !step.IsExpanded;
+        step.RefreshComputedProperties();
+        RefreshOrderLabels();
+        StatusText.Text = step.IsExpanded ? "繰り返しブロックを展開しました。" : "繰り返しブロックを折りたたみました。";
     }
 
     private static void MarkRepeatEnd(MacroStep step)
@@ -548,6 +557,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         Id = Guid.NewGuid(),
         Type = original.Type,
+        IsExpanded = original.IsExpanded,
         Name = $"{original.Name} (コピー)",
         Key = original.Key,
         MouseButton = original.MouseButton,
