@@ -389,9 +389,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         if (!e.Data.GetDataPresent("MacroStepNodes") || e.Data.GetData("MacroStepNodes") is not List<MacroStep> moving) return;
         var forbidden = moving.SelectMany(DescendantsAndSelf).ToHashSet();
-        if (intoRepeat && forbidden.Contains(target!))
+        if (target is not null && forbidden.Contains(target))
         {
-            StatusText.Text = "ブロックを自分自身または子孫の中には移動できません。";
+            StatusText.Text = "ブロックを自分自身または子孫の位置には移動できません。";
             return;
         }
         PushUndoSnapshot();
