@@ -111,6 +111,7 @@
                                 <Setter Property="BorderThickness" Value="0" />
                             </Style>
                             <Style TargetType="DataGridRow">
+                                <Setter Property="MinHeight" Value="46" />
                                 <Setter Property="Background" Value="#FF292D37" />
                                 <Setter Property="Foreground" Value="#FFF3F4F8" />
                                 <EventSetter Event="PreviewMouseRightButtonDown" Handler="StepsGridRow_PreviewMouseRightButtonDown" />
