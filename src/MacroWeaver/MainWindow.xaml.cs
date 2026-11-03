@@ -476,10 +476,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         // Treat the narrow strip at either edge of a row as the insertion gap.
         // This keeps ordinary clicks in the row available for selection/editing.
         var position = e.GetPosition(row);
-        const double edgeSize = 7.0;
+        // Make the insertion zones large enough to hit reliably. The row
+        // itself remains the only visible selection; this only records the
+        // insertion index used by Paste and AddStep.
+        const double edgeSize = 12.0;
+        var rowHeight = row.ActualHeight;
+        if (rowHeight <= 0) return;
+
         bool insertBefore;
         if (position.Y <= edgeSize) insertBefore = true;
-        else if (position.Y >= row.ActualHeight - edgeSize) insertBefore = false;
+        else if (position.Y >= rowHeight - edgeSize) insertBefore = false;
         else return;
 
         var list = FindContainingList(step);
