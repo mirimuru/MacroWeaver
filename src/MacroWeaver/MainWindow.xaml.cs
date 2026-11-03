@@ -432,14 +432,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void StepsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (StepsGrid.SelectedItem is MacroStep step) SelectedStep = step;
+        if (StepsGrid.CurrentItem is MacroStep current) SelectedStep = current;
+        else if (StepsGrid.SelectedItem is MacroStep selected) SelectedStep = selected;
     }
 
     private void StepsGridRow_PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
         if (sender is DataGridRow row && row.Item is MacroStep step)
         {
-            row.IsSelected = true;
+            // Keep a multi-selection when opening the context menu on one of its selected rows.
+            if (!row.IsSelected)
+            {
+                StepsGrid.SelectedItems.Clear();
+                row.IsSelected = true;
+            }
             SelectedStep = step;
             StepsGrid.CurrentItem = step;
         }
