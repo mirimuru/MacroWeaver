@@ -51,6 +51,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private const uint ModControl = 0x0002;
     private const int WmHotkey = 0x0312;
     private string? _currentMacroId;
+    private readonly Stack<string> _undoHistory = new();
+    private readonly Stack<string> _redoHistory = new();
+    private string? _clipboardStepsJson;
+    private const int MaxHistoryEntries = 100;
     private readonly string _macroLibraryDirectory = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacroWeaver", "Macros");
 
@@ -77,6 +81,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         InitializeComponent();
         DataContext = this;
         Steps.CollectionChanged += Steps_CollectionChanged;
+        PushUndoSnapshot();
         AddStep(MacroStepType.KeyPress);
         AddStep(MacroStepType.MouseClick);
         AddStep(MacroStepType.Wait);
@@ -127,6 +132,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void AddStep(MacroStepType type)
     {
+        PushUndoSnapshot();
         var step = new MacroStep
         {
             Type = type,
@@ -317,6 +323,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var selected = GetTopLevelSelectedSteps();
         if (selected.Count == 0 && SelectedStep is not null) selected.Add(SelectedStep);
         if (selected.Count == 0) return;
+        PushUndoSnapshot();
         foreach (var step in selected) FindContainingList(step).Remove(step);
         RefreshOrderLabels();
         SelectedStep = VisibleSteps.FirstOrDefault();
@@ -363,6 +370,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (forbidden.Contains(target) || target.Type != MacroStepType.Repeat) return;
 
         var ordered = movingSteps.OrderBy(step => VisibleSteps.IndexOf(step)).ToList();
+        PushUndoSnapshot();
         foreach (var step in ordered) FindContainingList(step).Remove(step);
         target.Children.AddRange(ordered);
         RefreshOrderLabels();
@@ -374,6 +382,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private static MacroStep CloneStep(MacroStep original) => new()
     {
+        Id = Guid.NewGuid(),
         Type = original.Type,
         Name = $"{original.Name} (コピー)",
         Key = original.Key,
@@ -398,6 +407,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (originals.Count == 0) return;
 
         var ordered = originals.OrderBy(step => VisibleSteps.IndexOf(step)).ToList();
+        PushUndoSnapshot();
         var copies = new List<MacroStep>();
         foreach (var original in ordered)
         {
@@ -433,6 +443,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var newIndex = oldIndex + offset;
         if (newIndex < 0 || newIndex >= parent.Count) return;
 
+        PushUndoSnapshot();
         parent.RemoveAt(oldIndex);
         parent.Insert(newIndex, item);
 
@@ -507,6 +518,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (_updatingProperties) return;
         if (SelectedStep is { Type: MacroStepType.Repeat } step)
         {
+            PushUndoSnapshot();
             step.RepeatByDuration = RepeatDurationCheck.IsChecked == true;
             RepeatCountSettings.Visibility = step.RepeatByDuration ? Visibility.Collapsed : Visibility.Visible;
             RepeatDurationSettings.Visibility = step.RepeatByDuration ? Visibility.Visible : Visibility.Collapsed;
@@ -523,6 +535,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void ApplyPropertyChanges()
     {
         if (_updatingProperties || SelectedStep is not { } step) return;
+        PushUndoSnapshot();
         step.Name = NameBox.Text;
         if (step.Type == MacroStepType.KeyPress)
         {
@@ -629,6 +642,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ReplaceCurrentSteps(IEnumerable<MacroStep> steps)
     {
+        _undoHistory.Clear();
+        _redoHistory.Clear();
         Steps.Clear();
         foreach (var step in steps) Steps.Add(step);
         RefreshOrderLabels();
@@ -857,6 +872,127 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             _loadingMacro = false;
             MessageBox.Show(this, $"削除に失敗しました。\n{ex.Message}", "削除エラー", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+
+    private string CaptureStepsSnapshot()
+        => JsonSerializer.Serialize(Steps.ToList());
+
+    private void PushUndoSnapshot()
+    {
+        if (_loadingMacro || _isWindowClosed) return;
+        var snapshot = CaptureStepsSnapshot();
+        if (_undoHistory.Count == 0 || _undoHistory.Peek() != snapshot)
+        {
+            _undoHistory.Push(snapshot);
+            if (_undoHistory.Count > MaxHistoryEntries)
+            {
+                var retained = _undoHistory.Take(MaxHistoryEntries).Reverse().ToList();
+                _undoHistory.Clear();
+                foreach (var entry in retained) _undoHistory.Push(entry);
+            }
+        }
+        _redoHistory.Clear();
+    }
+
+    private void RestoreHistorySnapshot(string snapshot)
+    {
+        var restored = JsonSerializer.Deserialize<List<MacroStep>>(snapshot) ?? [];
+        _loadingMacro = true;
+        Steps.Clear();
+        foreach (var step in restored) Steps.Add(step);
+        _loadingMacro = false;
+        RefreshOrderLabels();
+        SelectedStep = VisibleSteps.FirstOrDefault();
+        StepsGrid.SelectedItems.Clear();
+        if (SelectedStep is not null) StepsGrid.SelectedItem = SelectedStep;
+    }
+
+    private void Undo_Click(object sender, RoutedEventArgs e)
+    {
+        if (_undoHistory.Count == 0) return;
+        _redoHistory.Push(CaptureStepsSnapshot());
+        var previous = _undoHistory.Pop();
+        RestoreHistorySnapshot(previous);
+        StatusText.Text = "直前の編集を取り消しました。";
+    }
+
+    private void Redo_Click(object sender, RoutedEventArgs e)
+    {
+        if (_redoHistory.Count == 0) return;
+        _undoHistory.Push(CaptureStepsSnapshot());
+        var next = _redoHistory.Pop();
+        RestoreHistorySnapshot(next);
+        StatusText.Text = "編集をやり直しました。";
+    }
+
+    private void Copy_Click(object sender, RoutedEventArgs e)
+    {
+        var selected = GetTopLevelSelectedSteps();
+        if (selected.Count == 0 && SelectedStep is not null) selected.Add(SelectedStep);
+        if (selected.Count == 0) return;
+        var ordered = selected.OrderBy(step => VisibleSteps.IndexOf(step)).Select(CloneStep).ToList();
+        _clipboardStepsJson = JsonSerializer.Serialize(ordered);
+        try { Clipboard.SetText(_clipboardStepsJson); } catch { /* Keep the in-app clipboard available. */ }
+        StatusText.Text = $"{ordered.Count} 件の操作をコピーしました。";
+    }
+
+    private void Paste_Click(object sender, RoutedEventArgs e)
+    {
+        var json = _clipboardStepsJson;
+        if (Clipboard.ContainsText())
+        {
+            try { json = Clipboard.GetText(); } catch { /* Use the in-app clipboard. */ }
+        }
+        if (string.IsNullOrWhiteSpace(json)) return;
+
+        List<MacroStep>? copies;
+        try { copies = JsonSerializer.Deserialize<List<MacroStep>>(json); }
+        catch { StatusText.Text = "クリップボードにMacroWeaverの操作データがありません。"; return; }
+        if (copies is null || copies.Count == 0) return;
+
+        // Give every pasted node a fresh identity while preserving the complete repeat hierarchy.
+        copies = copies.Select(CloneStep).ToList();
+        IList<MacroStep> destination = SelectedStep is null ? Steps : FindContainingList(SelectedStep);
+        var insertAt = SelectedStep is null ? destination.Count : destination.IndexOf(SelectedStep) + 1;
+        if (SelectedStep?.Type == MacroStepType.Repeat)
+        {
+            destination = SelectedStep.Children;
+            insertAt = destination.Count;
+        }
+
+        PushUndoSnapshot();
+        for (var i = 0; i < copies.Count; i++) destination.Insert(insertAt + i, copies[i]);
+        RefreshOrderLabels();
+        StepsGrid.SelectedItems.Clear();
+        foreach (var copy in copies) StepsGrid.SelectedItems.Add(copy);
+        SelectedStep = copies.LastOrDefault();
+        if (SelectedStep is not null) StepsGrid.ScrollIntoView(SelectedStep);
+        StatusText.Text = $"{copies.Count} 件の操作を貼り付けました。";
+    }
+
+    private void MainWindow_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (System.Windows.Input.Keyboard.Modifiers != System.Windows.Input.ModifierKeys.Control) return;
+        switch (e.Key)
+        {
+            case System.Windows.Input.Key.C:
+                Copy_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+            case System.Windows.Input.Key.V:
+                Paste_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+            case System.Windows.Input.Key.Z:
+                Undo_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
+            case System.Windows.Input.Key.Y:
+                Redo_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                break;
         }
     }
 
