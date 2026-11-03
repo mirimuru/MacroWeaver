@@ -289,17 +289,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void AddRandomWait_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.RandomWait);
     private void AddRepeat_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.Repeat);
 
+    private List<MacroStep> GetSelectedSteps() => StepsGrid.SelectedItems.Cast<MacroStep>().ToList();
+
+    private List<MacroStep> GetTopLevelSelectedSteps()
+    {
+        var selected = GetSelectedSteps();
+        var set = selected.ToHashSet();
+        return selected.Where(step => !set.Any(parent => !ReferenceEquals(parent, step) &&
+            DescendantsAndSelf(parent).Skip(1).Contains(step))).ToList();
+    }
+
     private void Delete_Click(object sender, RoutedEventArgs e)
     {
-        if (SelectedStep is null) return;
-        var parent = FindContainingList(SelectedStep);
-        var index = parent.IndexOf(SelectedStep);
-        parent.Remove(SelectedStep);
+        var selected = GetTopLevelSelectedSteps();
+        if (selected.Count == 0 && SelectedStep is not null) selected.Add(SelectedStep);
+        if (selected.Count == 0) return;
+        foreach (var step in selected) FindContainingList(step).Remove(step);
         RefreshOrderLabels();
-        var nextIndex = Math.Clamp(index, 0, Math.Max(0, VisibleSteps.Count - 1));
-        SelectedStep = VisibleSteps.Count == 0 ? null : VisibleSteps[nextIndex];
+        SelectedStep = VisibleSteps.FirstOrDefault();
         StepsGrid.SelectedItem = SelectedStep;
-        StatusText.Text = "選択した操作を削除しました。";
+        StatusText.Text = $"{selected.Count} 件の操作を削除しました。";
     }
 
     private static IEnumerable<MacroStep> DescendantsAndSelf(MacroStep step)
