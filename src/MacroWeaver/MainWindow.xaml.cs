@@ -102,20 +102,28 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         VisibleSteps.Clear();
         for (var i = 0; i < Steps.Count; i++)
-            AddVisibleStep(Steps[i], (i + 1).ToString(CultureInfo.InvariantCulture), 0);
+            AddVisibleStep(Steps[i], (i + 1).ToString(CultureInfo.InvariantCulture), "", true);
         UpdateStepCount();
         StepsGrid.Items.Refresh();
     }
 
-    private void AddVisibleStep(MacroStep step, string label, int depth)
+    // Flatten the tree for the grid while retaining visible branch guides.
+    // Continuing vertical lines show that later siblings still belong to an
+    // ancestor repeat; ├─ and └─ distinguish intermediate and final children.
+    private void AddVisibleStep(MacroStep step, string label, string ancestorGuides, bool isLast)
     {
-        step.OrderLabel = depth == 0 ? label : $"{new string(' ', depth * 2)}↳ {label}";
+        step.OrderLabel = ancestorGuides.Length == 0
+            ? label
+            : $"{ancestorGuides}{(isLast ? "└─ " : "├─ ")}{label}";
         VisibleSteps.Add(step);
+
         if (step.Type == MacroStepType.Repeat)
         {
+            var childGuides = ancestorGuides + (ancestorGuides.Length == 0 ? "   " : (isLast ? "   " : "│  "));
             for (var i = 0; i < step.Children.Count; i++)
-                AddVisibleStep(step.Children[i], $"{label}.{i + 1}", depth + 1);
+                AddVisibleStep(step.Children[i], $"{label}.{i + 1}", childGuides, i == step.Children.Count - 1);
         }
+
         step.RefreshComputedProperties();
     }
 
