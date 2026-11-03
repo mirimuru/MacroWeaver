@@ -140,35 +140,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         step.RefreshComputedProperties();
     }
 
-    private void AddRepeatChild_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button button || button.DataContext is not MacroStep repeat || repeat.Type != MacroStepType.Repeat) return;
-        if (button.ContextMenu is not ContextMenu menu) return;
-        menu.PlacementTarget = button;
-        menu.IsOpen = true;
-    }
-
-    private void RepeatChildMenuItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not MenuItem item || item.Tag is not string typeName ||
-            !Enum.TryParse<MacroStepType>(typeName, out var type) ||
-            item.Parent is not ContextMenu menu ||
-            menu.PlacementTarget is not Button button ||
-            button.DataContext is not MacroStep repeat ||
-            repeat.Type != MacroStepType.Repeat) return;
-
-        PushUndoSnapshot();
-        var child = CreateStep(type);
-        repeat.Children.Add(child);
-        repeat.IsExpanded = true;
-        RefreshOrderLabels();
-        SelectedStep = child;
-        StepsGrid.SelectedItems.Clear();
-        StepsGrid.SelectedItem = child;
-        StepsGrid.ScrollIntoView(child);
-        StatusText.Text = $"「{child.Name}」を「{repeat.Name}」の内部に追加しました。";
-    }
-
     private void ToggleRepeat_Click(object sender, RoutedEventArgs e)
     {
         if ((sender as FrameworkElement)?.DataContext is not MacroStep step || step.Type != MacroStepType.Repeat) return;
