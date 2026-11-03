@@ -43,6 +43,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private bool _loadingMacro;
     private bool _allowClose;
     private bool _isHandlingClose;
+    private bool _isWindowClosed;
     private string? _savedMacroSnapshot;
     private HwndSource? _hotkeySource;
     private const int StopHotkeyId = 0x4D57;
@@ -218,8 +219,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         Dispatcher.BeginInvoke(new Action(() =>
         {
-            // The hook may queue an event just before recording stops. Keep that
-            // final event instead of discarding it when the dispatcher runs later.
+            // Ignore queued hook events once shutdown has started.
+            if (_allowClose || _isWindowClosed || !IsLoaded) return;
+            // Preserve the final event when recording merely stops.
             Steps.Add(step);
             RefreshOrderLabels();
             StepsGrid.SelectedItem = step;
@@ -271,13 +273,24 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 }
             }
 
+            // Defer Close until this async Closing handler has unwound.
             _allowClose = true;
-            Close();
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                if (!_isWindowClosed && IsVisible)
+                    Close();
+            }), System.Windows.Threading.DispatcherPriority.Background);
         }
         finally
         {
             _isHandlingClose = false;
         }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _isWindowClosed = true;
+        base.OnClosed(e);
     }
 
     private void AddKey_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.KeyPress);
