@@ -2,12 +2,14 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="MacroWeaver" Height="760" Width="1240" MinHeight="620" MinWidth="980"
-        WindowStartupLocation="CenterScreen" Background="#FF17191F" Foreground="#FFF3F4F8">
+        WindowStartupLocation="CenterScreen" Background="#FF17191F" Foreground="#FFF3F4F8" PreviewKeyDown="MainWindow_PreviewKeyDown">
     <Window.Resources>
         <ContextMenu x:Key="StepContextMenu">
             <MenuItem Header="↑ 上へ移動" Click="MoveUp_Click" />
             <MenuItem Header="↓ 下へ移動" Click="MoveDown_Click" />
             <Separator />
+            <MenuItem Header="コピー (Ctrl+C)" Click="Copy_Click" />
+            <MenuItem Header="貼り付け (Ctrl+V)" Click="Paste_Click" />
             <MenuItem Header="⧉ 複製" Click="Duplicate_Click" />
             <MenuItem Header="↳ 選択した操作を繰り返しに入れる..." Click="MoveIntoRepeat_Click" />
             <MenuItem Header="－ 削除" Click="Delete_Click" />
@@ -69,7 +71,11 @@
                             <Separator Margin="3,12" />
                             <Button Content="↑  上へ移動" Click="MoveUp_Click" HorizontalContentAlignment="Left" />
                             <Button Content="↓  下へ移動" Click="MoveDown_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="コピー (Ctrl+C)" Click="Copy_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="貼り付け (Ctrl+V)" Click="Paste_Click" HorizontalContentAlignment="Left" />
                             <Button Content="⧉  複製" Click="Duplicate_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="↶ 戻る (Ctrl+Z)" Click="Undo_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="↷ 進む (Ctrl+Y)" Click="Redo_Click" HorizontalContentAlignment="Left" />
                             <Button Content="－  削除" Click="Delete_Click" HorizontalContentAlignment="Left" />
                         </StackPanel>
                     </ScrollViewer>
