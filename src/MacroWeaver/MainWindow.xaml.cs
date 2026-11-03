@@ -151,7 +151,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private static void MarkRepeatEnd(MacroStep step)
     {
-        if (step.Type == MacroStepType.Repeat && step.Children.Count > 0)
+        if (step.Type == MacroStepType.Repeat && step.IsExpanded && step.Children.Count > 0)
         {
             MarkRepeatEnd(step.Children[^1]);
             return;
