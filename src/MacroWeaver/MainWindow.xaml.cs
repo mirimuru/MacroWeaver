@@ -58,6 +58,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private IList<MacroStep>? _insertionList;
     private int _insertionIndex = -1;
     private DataGridRow? _insertionMarkerRow;
+    private System.Windows.Media.Brush? _insertionMarkerOriginalBrush;
+    private Thickness _insertionMarkerOriginalThickness;
     private readonly string _macroLibraryDirectory = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacroWeaver", "Macros");
 
@@ -486,7 +488,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         bool insertBefore;
         if (position.Y <= edgeSize) insertBefore = true;
         else if (position.Y >= rowHeight - edgeSize) insertBefore = false;
-        else return;
+        else
+        {
+            // A normal row click cancels the pending insertion-gap selection.
+            ClearInsertionPoint();
+            return;
+        }
 
         var list = FindContainingList(step);
         var index = list.IndexOf(step) + (insertBefore ? 0 : 1);
@@ -500,19 +507,33 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _insertionList = list;
         _insertionIndex = index;
 
-        // Use the ordinary DataGrid row selection as the only visible selection
-        // state. The insertion index only determines where new steps are placed.
+        // Keep the normal row selection, and additionally draw a clear line
+        // on the exact edge that represents the insertion gap.
+        _insertionMarkerRow = row;
+        _insertionMarkerOriginalBrush = row.BorderBrush;
+        _insertionMarkerOriginalThickness = row.BorderThickness;
+        row.BorderBrush = System.Windows.Media.Brushes.DeepSkyBlue;
+        row.BorderThickness = before
+            ? new Thickness(0, 3, 0, 0)
+            : new Thickness(0, 0, 0, 3);
+
         StepsGrid.SelectedItems.Clear();
         row.IsSelected = true;
         StepsGrid.CurrentItem = row.Item;
         SelectedStep = row.Item as MacroStep;
-        _insertionMarkerRow = null;
-        StatusText.Text = $"挿入位置を設定しました（{(before ? "この操作の前" : "この操作の後")}）。貼り付けまたは操作追加でここに挿入します。";
+        StatusText.Text = $"青い線が挿入位置です（{(before ? "この操作の前" : "この操作の後")}）。貼り付けまたは操作追加でここに挿入します。";
     }
 
     private void ClearInsertionPoint()
     {
+        if (_insertionMarkerRow is not null)
+        {
+            _insertionMarkerRow.BorderBrush = _insertionMarkerOriginalBrush;
+            _insertionMarkerRow.BorderThickness = _insertionMarkerOriginalThickness;
+        }
         _insertionMarkerRow = null;
+        _insertionMarkerOriginalBrush = null;
+        _insertionMarkerOriginalThickness = default;
         _insertionList = null;
         _insertionIndex = -1;
     }
