@@ -130,13 +130,23 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 AddVisibleStep(child, $"{label}.{i + 1}", childGuides, i == step.Children.Count - 1);
                 if (i == step.Children.Count - 1)
                 {
-                    child.IsRepeatEnd = true;
-                    child.OrderLabel += "  └ 繰り返し終了";
+                    MarkRepeatEnd(child);
                 }
             }
         }
 
         step.RefreshComputedProperties();
+    }
+
+    private static void MarkRepeatEnd(MacroStep step)
+    {
+        if (step.Type == MacroStepType.Repeat && step.Children.Count > 0)
+        {
+            MarkRepeatEnd(step.Children[^1]);
+            return;
+        }
+        step.IsRepeatEnd = true;
+        step.OrderLabel += "  └ 繰り返し終了";
     }
 
     private int CountSteps(IEnumerable<MacroStep> steps) => steps.Sum(s => 1 + CountSteps(s.Children));
