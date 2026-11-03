@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using Microsoft.Win32;
 using System.Windows.Interop;
+using System.Runtime.InteropServices;
 using MacroWeaver.Models;
 using MacroWeaver.Services;
 
@@ -39,6 +40,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private MacroInputRecorder? _inputRecorder;
     private bool _stopRequested;
     private bool _loadingMacro;
+    private HwndSource? _hotkeySource;
+    private const int StopHotkeyId = 0x4D57;
+    private const uint ModAlt = 0x0001;
+    private const uint ModControl = 0x0002;
+    private const int WmHotkey = 0x0312;
     private string? _currentMacroId;
     private readonly string _macroLibraryDirectory = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacroWeaver", "Macros");
@@ -219,6 +225,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void MainWindow_Closing(object? sender, CancelEventArgs e)
     {
+        UnregisterStopHotkey();
         _inputRecorder?.Dispose();
         _inputRecorder = null;
     }
@@ -431,6 +438,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        RegisterStopHotkey();
         _loadingMacro = true;
         try
         {
@@ -765,6 +773,46 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             StatusText.Text = "マクロを一時停止しました。";
         }
     }
+
+    private void RegisterStopHotkey()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        _hotkeySource = HwndSource.FromHwnd(handle);
+        _hotkeySource?.AddHook(HotkeyWindowProc);
+
+        // Ctrl + Alt + S is registered globally, so it also works while another
+        // application (including a game) is in the foreground.
+        if (!RegisterHotKey(handle, StopHotkeyId, ModControl | ModAlt, 0x53))
+            StatusText.Text = "停止ホットキー（Ctrl + Alt + S）を登録できませんでした。別のアプリとの競合を確認してください。";
+    }
+
+    private void UnregisterStopHotkey()
+    {
+        var handle = new WindowInteropHelper(this).Handle;
+        if (handle != IntPtr.Zero)
+            UnregisterHotKey(handle, StopHotkeyId);
+        _hotkeySource?.RemoveHook(HotkeyWindowProc);
+        _hotkeySource = null;
+    }
+
+    private IntPtr HotkeyWindowProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == WmHotkey && wParam.ToInt32() == StopHotkeyId)
+        {
+            if (_executionService.IsRunning)
+                Stop_Click(this, new RoutedEventArgs());
+            handled = true;
+        }
+        return IntPtr.Zero;
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint modifiers, uint virtualKey);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
     private void Stop_Click(object sender, RoutedEventArgs e)
     {
