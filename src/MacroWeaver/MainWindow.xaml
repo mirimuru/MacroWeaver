@@ -131,8 +131,18 @@
                                         <Setter Property="Foreground" Value="#FFFFFFFF" />
                                     </Trigger>
                                     <DataTrigger Binding="{Binding TypeLabel}" Value="🔁 繰り返し">
-                                        <Setter Property="Background" Value="#FF343D52" />
+                                        <Setter Property="Background" Value="#FF254D70" />
+                                        <Setter Property="Foreground" Value="#FFE4F4FF" />
+                                        <Setter Property="BorderBrush" Value="#FF42A5F5" />
+                                        <Setter Property="BorderThickness" Value="3,2,1,1" />
                                         <Setter Property="FontWeight" Value="Bold" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsRepeatEnd}" Value="True">
+                                        <Setter Property="Background" Value="#FF593B27" />
+                                        <Setter Property="Foreground" Value="#FFFFE5C2" />
+                                        <Setter Property="BorderBrush" Value="#FFFFA34D" />
+                                        <Setter Property="BorderThickness" Value="3,1,1,3" />
+                                        <Setter Property="FontWeight" Value="SemiBold" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
