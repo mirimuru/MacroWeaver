@@ -40,12 +40,36 @@ public sealed class MacroExecutionService
         IsPaused = false;
         _pauseGate.Set();
 
+        int[]? originalMouseSettings = null;
+        var normalizedMouseSettingsApplied = false;
+
         try
         {
+            // Windows pointer acceleration makes identical relative SendInput deltas
+            // travel different screen distances depending on movement speed.
+            // Temporarily use 1:1 pointer scaling with acceleration disabled.
+            if (ContainsRelativeMove(steps))
+            {
+                originalMouseSettings = new int[3];
+                if (!SystemParametersInfo(SpiGetMouse, 0, originalMouseSettings, 0))
+                    throw new InvalidOperationException("Windowsのマウス設定を取得できませんでした。");
+
+                if (!SystemParametersInfo(SpiSetMouse, 0, [0, 0, 10], 0))
+                    throw new InvalidOperationException("マウス加速を一時的に無効化できませんでした。");
+
+                normalizedMouseSettingsApplied = true;
+            }
+
             await ExecuteStepsAsync(steps, progress, _runCts.Token, 0);
         }
         finally
         {
+            if (normalizedMouseSettingsApplied && originalMouseSettings is not null)
+            {
+                // Restore the user's exact settings even when execution is stopped or fails.
+                SystemParametersInfo(SpiSetMouse, 0, originalMouseSettings, 0);
+            }
+
             IsRunning = false;
             IsPaused = false;
             _pauseGate.Set();
@@ -192,6 +216,18 @@ public sealed class MacroExecutionService
         };
         SendInput(1, [input], Marshal.SizeOf<INPUT>());
     }
+
+    private const uint SpiGetMouse = 0x0003;
+    private const uint SpiSetMouse = 0x0004;
+
+    private static bool ContainsRelativeMove(IEnumerable<MacroStep> steps)
+        => steps.Any(step => step.Type == MacroStepType.MouseMoveRelative ||
+                             ContainsRelativeMove(step.Children));
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SystemParametersInfo(
+        uint uiAction, uint uiParam, int[] pvParam, uint fWinIni);
 
     private static void MoveMouseRelative(int deltaX, int deltaY)
     {
