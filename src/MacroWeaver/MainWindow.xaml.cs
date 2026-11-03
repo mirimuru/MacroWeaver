@@ -55,6 +55,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private readonly Stack<string> _redoHistory = new();
     private string? _clipboardStepsJson;
     private const int MaxHistoryEntries = 100;
+    private IList<MacroStep>? _insertionList;
+    private int _insertionIndex = -1;
+    private DataGridRow? _insertionMarkerRow;
     private readonly string _macroLibraryDirectory = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacroWeaver", "Macros");
 
@@ -153,7 +156,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         };
 
         IList<MacroStep> destination;
-        if (AddAtRootCheck.IsChecked == true)
+        if (_insertionList is not null && _insertionIndex >= 0)
+        {
+            destination = _insertionList;
+            destination.Insert(Math.Clamp(_insertionIndex, 0, destination.Count), step);
+            ClearInsertionPoint();
+        }
+        else if (AddAtRootCheck.IsChecked == true)
         {
             destination = Steps;
             var rootIndex = SelectedStep is null ? -1 : Steps.IndexOf(SelectedStep);
@@ -458,6 +467,50 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (StepsGrid.CurrentItem is MacroStep current) SelectedStep = current;
         else if (StepsGrid.SelectedItem is MacroStep selected) SelectedStep = selected;
+    }
+
+    private void StepsGridRow_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (sender is not DataGridRow row || row.Item is not MacroStep step) return;
+
+        // Treat the narrow strip at either edge of a row as the insertion gap.
+        // This keeps ordinary clicks in the row available for selection/editing.
+        var position = e.GetPosition(row);
+        const double edgeSize = 7.0;
+        bool insertBefore;
+        if (position.Y <= edgeSize) insertBefore = true;
+        else if (position.Y >= row.ActualHeight - edgeSize) insertBefore = false;
+        else return;
+
+        var list = FindContainingList(step);
+        var index = list.IndexOf(step) + (insertBefore ? 0 : 1);
+        SetInsertionPoint(list, index, row, insertBefore);
+        e.Handled = true;
+    }
+
+    private void SetInsertionPoint(IList<MacroStep> list, int index, DataGridRow row, bool before)
+    {
+        ClearInsertionPoint();
+        _insertionList = list;
+        _insertionIndex = index;
+        _insertionMarkerRow = row;
+        row.BorderBrush = System.Windows.Media.Brushes.Orange;
+        row.BorderThickness = before
+            ? new Thickness(0, 3, 0, 0)
+            : new Thickness(0, 0, 0, 3);
+        StatusText.Text = $"挿入位置を設定しました（{(before ? "この操作の前" : "この操作の後")}）。貼り付けまたは操作追加でここに挿入します。";
+    }
+
+    private void ClearInsertionPoint()
+    {
+        if (_insertionMarkerRow is not null)
+        {
+            _insertionMarkerRow.ClearValue(Control.BorderBrushProperty);
+            _insertionMarkerRow.ClearValue(Control.BorderThicknessProperty);
+        }
+        _insertionMarkerRow = null;
+        _insertionList = null;
+        _insertionIndex = -1;
     }
 
     private void StepsGridRow_PreviewMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -932,7 +985,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var selected = GetTopLevelSelectedSteps();
         if (selected.Count == 0 && SelectedStep is not null) selected.Add(SelectedStep);
         if (selected.Count == 0) return;
-        var ordered = selected.OrderBy(step => VisibleSteps.IndexOf(step)).Select(CloneStep).ToList();
+        var ordered = selected.OrderBy(step => VisibleSteps.IndexOf(step)).ToList();
+        // Store originals in the clipboard payload; cloning (including fresh IDs
+        // and the copy suffix) happens once, when the user pastes.
         _clipboardStepsJson = JsonSerializer.Serialize(ordered);
         try { Clipboard.SetText(_clipboardStepsJson); } catch { /* Keep the in-app clipboard available. */ }
         StatusText.Text = $"{ordered.Count} 件の操作をコピーしました。";
@@ -954,16 +1009,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         // Give every pasted node a fresh identity while preserving the complete repeat hierarchy.
         copies = copies.Select(CloneStep).ToList();
-        IList<MacroStep> destination = SelectedStep is null ? Steps : FindContainingList(SelectedStep);
-        var insertAt = SelectedStep is null ? destination.Count : destination.IndexOf(SelectedStep) + 1;
-        if (SelectedStep?.Type == MacroStepType.Repeat)
+        IList<MacroStep> destination;
+        int insertAt;
+        if (_insertionList is not null && _insertionIndex >= 0)
         {
-            destination = SelectedStep.Children;
-            insertAt = destination.Count;
+            destination = _insertionList;
+            insertAt = Math.Clamp(_insertionIndex, 0, destination.Count);
+        }
+        else
+        {
+            destination = SelectedStep is null ? Steps : FindContainingList(SelectedStep);
+            insertAt = SelectedStep is null ? destination.Count : destination.IndexOf(SelectedStep) + 1;
+            if (SelectedStep?.Type == MacroStepType.Repeat)
+            {
+                destination = SelectedStep.Children;
+                insertAt = destination.Count;
+            }
         }
 
         PushUndoSnapshot();
         for (var i = 0; i < copies.Count; i++) destination.Insert(insertAt + i, copies[i]);
+        ClearInsertionPoint();
         RefreshOrderLabels();
         StepsGrid.SelectedItems.Clear();
         foreach (var copy in copies) StepsGrid.SelectedItems.Add(copy);
