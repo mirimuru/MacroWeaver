@@ -116,7 +116,7 @@
                             </Style>
                             <Style TargetType="DataGridRow">
                                 <Setter Property="MinHeight" Value="62" />
-                                <Setter Property="Margin" Value="8,5,8,5" />
+                                <Setter Property="Margin" Value="12,1,12,1" />
                                 <Setter Property="BorderThickness" Value="1" />
                                 <Setter Property="BorderBrush" Value="#FF41495D" />
                                 <Setter Property="Background" Value="#FF303541" />
@@ -130,7 +130,7 @@
                                                     Background="{TemplateBinding Background}"
                                                     BorderBrush="{TemplateBinding BorderBrush}"
                                                     BorderThickness="{TemplateBinding BorderThickness}"
-                                                    CornerRadius="10"
+                                                    CornerRadius="4"
                                                     SnapsToDevicePixels="True">
                                                 <SelectiveScrollingGrid>
                                                     <SelectiveScrollingGrid.ColumnDefinitions>
@@ -159,18 +159,25 @@
                                         <Setter Property="BorderThickness" Value="2" />
                                         <Setter Property="Foreground" Value="#FFFFFFFF" />
                                     </Trigger>
+                                    <!-- Repeat body: a continuous yellow rail on the left. -->
+                                    <DataTrigger Binding="{Binding IsInsideRepeat}" Value="True">
+                                        <Setter Property="BorderBrush" Value="#FFFFD54F" />
+                                        <Setter Property="BorderThickness" Value="4,0,0,0" />
+                                    </DataTrigger>
+                                    <!-- The repeat header draws the top edge and starts the left rail. -->
                                     <DataTrigger Binding="{Binding TypeLabel}" Value="🔁 繰り返し">
-                                        <Setter Property="Background" Value="#FF214E70" />
-                                        <Setter Property="Foreground" Value="#FFE4F4FF" />
-                                        <Setter Property="BorderBrush" Value="#FF42A5F5" />
-                                        <Setter Property="BorderThickness" Value="3,2,2,1" />
+                                        <Setter Property="Background" Value="#FFFFD54F" />
+                                        <Setter Property="Foreground" Value="#FF302713" />
+                                        <Setter Property="BorderBrush" Value="#FFFFD54F" />
+                                        <Setter Property="BorderThickness" Value="4,4,0,0" />
                                         <Setter Property="FontWeight" Value="Bold" />
                                     </DataTrigger>
+                                    <!-- The final child draws the bottom edge: start and end use the same yellow. -->
                                     <DataTrigger Binding="{Binding IsRepeatEnd}" Value="True">
-                                        <Setter Property="Background" Value="#FF593B27" />
-                                        <Setter Property="Foreground" Value="#FFFFE5C2" />
-                                        <Setter Property="BorderBrush" Value="#FFFFA34D" />
-                                        <Setter Property="BorderThickness" Value="3,1,2,3" />
+                                        <Setter Property="Background" Value="#FFFFD54F" />
+                                        <Setter Property="Foreground" Value="#FF302713" />
+                                        <Setter Property="BorderBrush" Value="#FFFFD54F" />
+                                        <Setter Property="BorderThickness" Value="4,0,0,4" />
                                         <Setter Property="FontWeight" Value="SemiBold" />
                                     </DataTrigger>
                                 </Style.Triggers>
