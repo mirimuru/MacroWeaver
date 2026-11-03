@@ -380,17 +380,26 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void Duplicate_Click(object sender, RoutedEventArgs e)
     {
-        if (SelectedStep is null) return;
-        var original = SelectedStep;
-        var parent = FindContainingList(original);
-        var copy = CloneStep(original);
-        var index = parent.IndexOf(original) + 1;
-        parent.Insert(index, copy);
+        var originals = GetTopLevelSelectedSteps();
+        if (originals.Count == 0 && SelectedStep is not null) originals.Add(SelectedStep);
+        if (originals.Count == 0) return;
+
+        var ordered = originals.OrderBy(step => VisibleSteps.IndexOf(step)).ToList();
+        var copies = new List<MacroStep>();
+        foreach (var original in ordered)
+        {
+            var parent = FindContainingList(original);
+            var copy = CloneStep(original);
+            parent.Insert(parent.IndexOf(original) + 1, copy);
+            copies.Add(copy);
+        }
+
         RefreshOrderLabels();
-        SelectedStep = copy;
-        StepsGrid.SelectedItem = copy;
-        StepsGrid.ScrollIntoView(copy);
-        StatusText.Text = "操作を複製しました。";
+        StepsGrid.SelectedItems.Clear();
+        foreach (var copy in copies) StepsGrid.SelectedItems.Add(copy);
+        SelectedStep = copies.LastOrDefault();
+        if (SelectedStep is not null) StepsGrid.ScrollIntoView(SelectedStep);
+        StatusText.Text = $"{copies.Count} 件の操作を複製しました。";
     }
 
     private void MoveUp_Click(object sender, RoutedEventArgs e) => MoveSelected(-1);
