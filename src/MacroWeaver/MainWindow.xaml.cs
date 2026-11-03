@@ -115,6 +115,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     // ancestor repeat; ├─ and └─ distinguish intermediate and final children.
     private void AddVisibleStep(MacroStep step, string label, string ancestorGuides, bool isLast)
     {
+        step.IsRepeatEnd = false;
         step.OrderLabel = ancestorGuides.Length == 0
             ? label
             : $"{ancestorGuides}{(isLast ? "└─ " : "├─ ")}{label}";
@@ -124,7 +125,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             var childGuides = ancestorGuides + (ancestorGuides.Length == 0 ? "   " : (isLast ? "   " : "│  "));
             for (var i = 0; i < step.Children.Count; i++)
-                AddVisibleStep(step.Children[i], $"{label}.{i + 1}", childGuides, i == step.Children.Count - 1);
+            {
+                var child = step.Children[i];
+                AddVisibleStep(child, $"{label}.{i + 1}", childGuides, i == step.Children.Count - 1);
+                if (i == step.Children.Count - 1)
+                {
+                    child.IsRepeatEnd = true;
+                    child.OrderLabel += "  └ 繰り返し終了";
+                }
+            }
         }
 
         step.RefreshComputedProperties();
