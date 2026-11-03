@@ -60,6 +60,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private DataGridRow? _insertionMarkerRow;
     private System.Windows.Media.Brush? _insertionMarkerOriginalBrush;
     private Thickness _insertionMarkerOriginalThickness;
+    private Point _dragStartPoint;
+    private MacroStep? _draggedStep;
+    private bool _isPaletteDrag;
     private readonly string _macroLibraryDirectory = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MacroWeaver", "Macros");
 
@@ -317,6 +320,127 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _isWindowClosed = true;
         base.OnClosed(e);
     }
+
+    private void PaletteButton_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (e.LeftButton != System.Windows.Input.MouseButtonState.Pressed || sender is not Button button || button.Tag is not string typeName) return;
+        if (!Enum.TryParse<MacroStepType>(typeName, out var type)) return;
+        _isPaletteDrag = true;
+        try { DragDrop.DoDragDrop(button, new DataObject("MacroStepType", type), DragDropEffects.Copy); }
+        finally { _isPaletteDrag = false; }
+    }
+
+    private void StepsGrid_PreviewMouseMove(object sender, System.Windows.Input.MouseEventArgs e)
+    {
+        if (_isPaletteDrag || e.LeftButton != System.Windows.Input.MouseButtonState.Pressed) return;
+        if (_draggedStep is null)
+        {
+            _dragStartPoint = e.GetPosition(StepsGrid);
+            _draggedStep = StepsGrid.SelectedItem as MacroStep;
+            return;
+        }
+        var p = e.GetPosition(StepsGrid);
+        if (Math.Abs(p.X - _dragStartPoint.X) < SystemParameters.MinimumHorizontalDragDistance &&
+            Math.Abs(p.Y - _dragStartPoint.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+        var moving = GetTopLevelSelectedSteps();
+        if (moving.Count == 0 && _draggedStep is not null) moving.Add(_draggedStep);
+        if (moving.Count == 0) return;
+        DragDrop.DoDragDrop(StepsGrid, new DataObject("MacroStepNodes", moving), DragDropEffects.Move);
+        _draggedStep = null;
+    }
+
+    private void StepsGrid_PreviewMouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e) => _draggedStep = null;
+
+    private void StepsGrid_DragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent("MacroStepType") ? DragDropEffects.Copy :
+            e.Data.GetDataPresent("MacroStepNodes") ? DragDropEffects.Move : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void StepsGrid_Drop(object sender, DragEventArgs e)
+    {
+        var row = FindVisualParent<DataGridRow>(e.OriginalSource as DependencyObject);
+        var target = row?.Item as MacroStep;
+        IList<MacroStep> destination = Steps;
+        var insertAt = Steps.Count;
+        var intoRepeat = false;
+        if (target is not null && row is not null)
+        {
+            var ratio = e.GetPosition(row).Y / Math.Max(1, row.ActualHeight);
+            intoRepeat = target.Type == MacroStepType.Repeat && ratio >= 0.25 && ratio <= 0.75;
+            if (intoRepeat) { destination = target.Children; insertAt = destination.Count; }
+            else { destination = FindContainingList(target); insertAt = destination.IndexOf(target) + (ratio > 0.5 ? 1 : 0); }
+        }
+
+        if (e.Data.GetDataPresent("MacroStepType") && e.Data.GetData("MacroStepType") is MacroStepType type)
+        {
+            PushUndoSnapshot();
+            var created = CreateStep(type);
+            destination.Insert(Math.Clamp(insertAt, 0, destination.Count), created);
+            RefreshOrderLabels();
+            SelectedStep = created;
+            StepsGrid.SelectedItem = created;
+            StepsGrid.ScrollIntoView(created);
+            StatusText.Text = intoRepeat ? "繰り返しブロックの中に追加しました。" : "ブロックを追加しました。";
+            e.Handled = true;
+            return;
+        }
+
+        if (!e.Data.GetDataPresent("MacroStepNodes") || e.Data.GetData("MacroStepNodes") is not List<MacroStep> moving) return;
+        var forbidden = moving.SelectMany(DescendantsAndSelf).ToHashSet();
+        if (intoRepeat && forbidden.Contains(target!))
+        {
+            StatusText.Text = "ブロックを自分自身または子孫の中には移動できません。";
+            return;
+        }
+        PushUndoSnapshot();
+        var ordered = moving.OrderBy(x => VisibleSteps.IndexOf(x)).ToList();
+        foreach (var node in ordered)
+        {
+            var oldList = FindContainingList(node);
+            var oldIndex = oldList.IndexOf(node);
+            if (ReferenceEquals(oldList, destination) && oldIndex < insertAt) insertAt--;
+            oldList.Remove(node);
+        }
+        insertAt = Math.Clamp(insertAt, 0, destination.Count);
+        foreach (var node in ordered) destination.Insert(insertAt++, node);
+        RefreshOrderLabels();
+        StepsGrid.SelectedItems.Clear();
+        foreach (var node in ordered) StepsGrid.SelectedItems.Add(node);
+        SelectedStep = ordered.LastOrDefault();
+        StatusText.Text = intoRepeat ? "ブロックを繰り返しの中に移動しました。" : "ブロックの順番を変更しました。";
+        e.Handled = true;
+    }
+
+    private static T? FindVisualParent<T>(DependencyObject? child) where T : DependencyObject
+    {
+        while (child is not null)
+        {
+            if (child is T parent) return parent;
+            child = System.Windows.Media.VisualTreeHelper.GetParent(child);
+        }
+        return null;
+    }
+
+    private static MacroStep CreateStep(MacroStepType type) => new()
+    {
+        Type = type,
+        Seconds = type == MacroStepType.Wait ? 1 : 0.1,
+        RepeatCount = type == MacroStepType.Repeat ? 3 : 1,
+        Name = type switch
+        {
+            MacroStepType.KeyPress => "キー入力",
+            MacroStepType.MouseClick => "マウスクリック",
+            MacroStepType.MouseMove => "マウス移動（座標）",
+            MacroStepType.MouseMoveRelative => "マウス相対移動",
+            MacroStepType.MouseScroll => "マウスホイール",
+            MacroStepType.Wait => "待機",
+            MacroStepType.RandomWait => "ランダム待機",
+            MacroStepType.Repeat => "繰り返し",
+            _ => "操作"
+        }
+    };
 
     private void AddKey_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.KeyPress);
     private void AddClick_Click(object sender, RoutedEventArgs e) => AddStep(MacroStepType.MouseClick);
