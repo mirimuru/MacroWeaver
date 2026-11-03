@@ -193,7 +193,7 @@ public sealed class MacroExecutionService
         SendInput(1, [input], Marshal.SizeOf<INPUT>());
     }
 
-    private static async Task MoveMouseRelativeAsync(int deltaX, int deltaY, CancellationToken token)
+    private async Task MoveMouseRelativeAsync(int deltaX, int deltaY, CancellationToken token)
     {
         // Send large relative deltas as paced smaller inputs. This gives games such as
         // Minecraft opportunities to consume mouse motion between render/input frames,
