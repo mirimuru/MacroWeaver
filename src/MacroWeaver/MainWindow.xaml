@@ -9,6 +9,7 @@
             <MenuItem Header="↓ 下へ移動" Click="MoveDown_Click" />
             <Separator />
             <MenuItem Header="⧉ 複製" Click="Duplicate_Click" />
+            <MenuItem Header="↳ 選択した操作を繰り返しに入れる..." Click="MoveIntoRepeat_Click" />
             <MenuItem Header="－ 削除" Click="Delete_Click" />
         </ContextMenu>
     </Window.Resources>
