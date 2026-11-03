@@ -493,21 +493,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ClearInsertionPoint();
         _insertionList = list;
         _insertionIndex = index;
-        _insertionMarkerRow = row;
-        row.BorderBrush = System.Windows.Media.Brushes.Orange;
-        row.BorderThickness = before
-            ? new Thickness(0, 3, 0, 0)
-            : new Thickness(0, 0, 0, 3);
+
+        // Use the ordinary DataGrid row selection as the only visible selection
+        // state. The insertion index only determines where new steps are placed.
+        StepsGrid.SelectedItems.Clear();
+        row.IsSelected = true;
+        StepsGrid.CurrentItem = row.Item;
+        SelectedStep = row.Item as MacroStep;
+        _insertionMarkerRow = null;
         StatusText.Text = $"挿入位置を設定しました（{(before ? "この操作の前" : "この操作の後")}）。貼り付けまたは操作追加でここに挿入します。";
     }
 
     private void ClearInsertionPoint()
     {
-        if (_insertionMarkerRow is not null)
-        {
-            _insertionMarkerRow.ClearValue(Control.BorderBrushProperty);
-            _insertionMarkerRow.ClearValue(Control.BorderThicknessProperty);
-        }
         _insertionMarkerRow = null;
         _insertionList = null;
         _insertionIndex = -1;
