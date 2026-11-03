@@ -159,6 +159,30 @@
                                         <Setter Property="BorderThickness" Value="2" />
                                         <Setter Property="Foreground" Value="#FFFFFFFF" />
                                     </Trigger>
+                                    <DataTrigger Binding="{Binding RepeatDepth}" Value="1">
+                                        <Setter Property="Margin" Value="20,1,12,1" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding RepeatDepth}" Value="2">
+                                        <Setter Property="Margin" Value="28,1,12,1" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding RepeatDepth}" Value="3">
+                                        <Setter Property="Margin" Value="36,1,12,1" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding RepeatDepth}" Value="4">
+                                        <Setter Property="Margin" Value="44,1,12,1" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding RepeatDepth}" Value="5">
+                                        <Setter Property="Margin" Value="52,1,12,1" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding RepeatDepth}" Value="6">
+                                        <Setter Property="Margin" Value="60,1,12,1" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding RepeatDepth}" Value="7">
+                                        <Setter Property="Margin" Value="68,1,12,1" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding RepeatDepth}" Value="8">
+                                        <Setter Property="Margin" Value="76,1,12,1" />
+                                    </DataTrigger>
                                     <!-- Repeat body: a continuous yellow rail on the left. -->
                                     <DataTrigger Binding="{Binding IsInsideRepeat}" Value="True">
                                         <Setter Property="BorderBrush" Value="#FFFFD54F" />
