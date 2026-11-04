@@ -40,6 +40,16 @@ public sealed class MacroStep : INotifyPropertyChanged
     public bool IsExpanded { get; set; } = true;
     public bool IsRepeat => Type == MacroStepType.Repeat;
     public string ExpandGlyph => IsExpanded ? "−" : "+";
+    public string BlockColor => Type switch
+    {
+        MacroStepType.KeyPress => "#FF8554C8",
+        MacroStepType.MouseClick => "#FFD65C83",
+        MacroStepType.MouseMove or MacroStepType.MouseMoveRelative => "#FF4C97FF",
+        MacroStepType.MouseScroll => "#FF4CBFE6",
+        MacroStepType.Wait or MacroStepType.RandomWait => "#FFFFAB19",
+        MacroStepType.Repeat => "#FFFFBF00",
+        _ => "#FF6B7280"
+    };
     public List<MacroStep> Children { get; set; } = [];
 
     public string Name
@@ -156,6 +166,7 @@ public sealed class MacroStep : INotifyPropertyChanged
         OnPropertyChanged(nameof(Summary));
         OnPropertyChanged(nameof(IsRepeat));
         OnPropertyChanged(nameof(ExpandGlyph));
+        OnPropertyChanged(nameof(BlockColor));
     }
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
