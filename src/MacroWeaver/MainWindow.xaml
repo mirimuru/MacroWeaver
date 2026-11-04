@@ -218,12 +218,13 @@
                             </Style>
                             <Style TargetType="DataGridCell">
                                 <Setter Property="Padding" Value="8,7" />
-                                <Setter Property="Background" Value="{Binding BlockColor}" />
+                                <!-- Shape is drawn by the row Path; cells must not cover it. -->
+                                <Setter Property="Background" Value="Transparent" />
                                 <Setter Property="BorderThickness" Value="0" />
                                 <Setter Property="Foreground" Value="#FFF3F4F8" />
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#FF46516F" />
+                                        <Setter Property="Background" Value="Transparent" />
                                         <Setter Property="Foreground" Value="#FFFFFFFF" />
                                     </Trigger>
                                 </Style.Triggers>
