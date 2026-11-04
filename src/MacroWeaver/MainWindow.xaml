@@ -62,14 +62,14 @@
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled"
                                   CanContentScroll="False" PanningMode="VerticalOnly">
                         <StackPanel>
-                            <Button Content="⌨  キー入力" Tag="KeyPress" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddKey_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="🖱  マウスクリック" Tag="MouseClick" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddClick_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="↗  マウス移動（座標）" Tag="MouseMove" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddMove_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="↔  マウス相対移動（視点操作）" Tag="MouseMoveRelative" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddRelativeMove_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="↕  マウスホイール" Tag="MouseScroll" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddScroll_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="⏱  待機" Tag="Wait" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddWait_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="🎲  ランダム待機" Tag="RandomWait" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddRandomWait_Click" HorizontalContentAlignment="Left" />
-                            <Button Content="🔁  繰り返し" Tag="Repeat" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddRepeat_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="⌨  キー入力" Background="#FF8554C8" Foreground="White" Tag="KeyPress" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddKey_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="🖱  マウスクリック" Background="#FFD65C83" Foreground="White" Tag="MouseClick" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddClick_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="↗  マウス移動（座標）" Background="#FF4C97FF" Foreground="White" Tag="MouseMove" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddMove_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="↔  マウス相対移動（視点操作）" Background="#FF4C97FF" Foreground="White" Tag="MouseMoveRelative" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddRelativeMove_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="↕  マウスホイール" Background="#FF4CBFE6" Foreground="White" Tag="MouseScroll" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddScroll_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="⏱  待機" Background="#FFFFAB19" Foreground="#FF302713" Tag="Wait" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddWait_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="🎲  ランダム待機" Background="#FFFFAB19" Foreground="#FF302713" Tag="RandomWait" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddRandomWait_Click" HorizontalContentAlignment="Left" />
+                            <Button Content="🔁  繰り返し" Background="#FFFFBF00" Foreground="#FF302713" Tag="Repeat" PreviewMouseMove="PaletteButton_PreviewMouseMove" Click="AddRepeat_Click" HorizontalContentAlignment="Left" />
                             <CheckBox x:Name="AddAtRootCheck" Content="最上位に追加（繰り返しの外）" Foreground="#FFF3F4F8" Margin="4,4,4,10" ToolTip="チェックすると、選択中の繰り返しの内部ではなく、最上位の手順に追加します。" />
                             <Separator Margin="3,12" />
                             <Button Content="↑  上へ移動" Click="MoveUp_Click" HorizontalContentAlignment="Left" />
