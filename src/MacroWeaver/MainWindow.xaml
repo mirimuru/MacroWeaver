@@ -126,12 +126,15 @@
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="{x:Type DataGridRow}">
-                                            <Border x:Name="BlockSurface"
-                                                    Background="{TemplateBinding Background}"
-                                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                                    CornerRadius="10"
-                                                    SnapsToDevicePixels="True">
+                                            <Grid SnapsToDevicePixels="True">
+                                                <!-- Scratch風の上下ノッチとタブを持つブロック形状 -->
+                                                <Path x:Name="BlockSurface"
+                                                      Data="M 0,8 H 34 C 34,8 34,15 42,15 C 50,15 50,8 50,8 H 100 V 60 H 62 C 62,60 62,68 50,68 C 38,68 38,60 38,60 H 0 Z"
+                                                      Stretch="Fill"
+                                                      Fill="{TemplateBinding Background}"
+                                                      Stroke="{TemplateBinding BorderBrush}"
+                                                      StrokeThickness="1"
+                                                      IsHitTestVisible="False" />
                                                 <SelectiveScrollingGrid>
                                                     <SelectiveScrollingGrid.ColumnDefinitions>
                                                         <ColumnDefinition Width="Auto" />
@@ -145,7 +148,7 @@
                                                                             ItemsPanel="{TemplateBinding ItemsPanel}"
                                                                             SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" />
                                                 </SelectiveScrollingGrid>
-                                            </Border>
+                                            </Grid>
                                         </ControlTemplate>
                                     </Setter.Value>
                                 </Setter>
