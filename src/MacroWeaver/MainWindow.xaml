@@ -129,7 +129,7 @@
                                             <Grid SnapsToDevicePixels="True">
                                                 <!-- Scratch風の上下ノッチとタブを持つブロック形状 -->
                                                 <Path x:Name="BlockSurface"
-                                                      Data="M 0,8 H 34 C 34,8 34,0 42,0 C 50,0 50,8 50,8 H 100 V 68 H 50 C 50,68 50,76 42,76 C 34,76 34,68 34,68 H 0 Z"
+                                                      Data="M 0,0 H 34 C 34,0 34,8 42,8 C 50,8 50,0 50,0 H 100 V 68 H 50 C 50,68 50,76 42,76 C 34,76 34,68 34,68 H 0 Z"
                                                       Stretch="Fill"
                                                       Fill="{TemplateBinding Background}"
                                                       Stroke="{TemplateBinding BorderBrush}"
