@@ -137,7 +137,7 @@
                                                       Stretch="Fill"
                                                       Fill="{TemplateBinding Background}"
                                                       Stroke="{TemplateBinding BorderBrush}"
-                                                      StrokeThickness="1"
+                                                      StrokeThickness="2"
                                                       IsHitTestVisible="False" />
                                                 <SelectiveScrollingGrid>
                                                     <SelectiveScrollingGrid.ColumnDefinitions>
@@ -161,8 +161,8 @@
                                 <Setter Property="ContextMenu" Value="{StaticResource StepContextMenu}" />
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#FF46516F" />
-                                        <Setter Property="BorderBrush" Value="#FF91A7FF" />
+                                        <!-- 選択時もブロック本来の種類色を維持し、輪郭で選択状態を示す。 -->
+                                        <Setter Property="BorderBrush" Value="#FFB9C7FF" />
                                         <Setter Property="BorderThickness" Value="2" />
                                         <Setter Property="Foreground" Value="#FFFFFFFF" />
                                     </Trigger>
