@@ -138,7 +138,11 @@
                                                       Fill="{TemplateBinding Background}"
                                                       Stroke="{TemplateBinding BorderBrush}"
                                                       StrokeThickness="2"
-                                                      IsHitTestVisible="False" />
+                                                      IsHitTestVisible="False">
+                                                    <Path.Effect>
+                                                        <DropShadowEffect Color="#FF000000" BlurRadius="5" ShadowDepth="2" Opacity="0.24" />
+                                                    </Path.Effect>
+                                                </Path>
                                                 <SelectiveScrollingGrid>
                                                     <SelectiveScrollingGrid.ColumnDefinitions>
                                                         <ColumnDefinition Width="Auto" />
